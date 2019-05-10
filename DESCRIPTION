@@ -1,0 +1,20 @@
+Package: OrvacRCT
+Type: Package
+Title: Experimental cpp version of simulations
+Version: 1.0
+Date: 2019-02-01
+Author: Mark Jones
+Maintainer: Your Name <mark@tki.org>
+Description: cpp code to support orvac simulation
+License: GPL (>= 2)
+Imports: 
+  Rcpp (>= 1.0.0)
+Suggests:
+    knitr,
+    rmarkdown,
+    brms,
+    boot,
+    dplyr,
+    testthat
+LinkingTo: Rcpp, RcppArmadillo, RcppDist, RcppParallel
+VignetteBuilder: knitr
