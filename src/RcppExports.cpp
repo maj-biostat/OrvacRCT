@@ -17,6 +17,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_interims
+arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg);
+RcppExport SEXP _OrvacRCT_get_interims(SEXP dSEXP, SEXP cfgSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type d(dSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type cfg(cfgSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_interims(d, cfg));
+    return rcpp_result_gen;
+END_RCPP
+}
 // nothing_much
 void nothing_much();
 RcppExport SEXP _OrvacRCT_nothing_much() {
@@ -65,6 +77,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_OrvacRCT_get_trial_dat", (DL_FUNC) &_OrvacRCT_get_trial_dat, 1},
+    {"_OrvacRCT_get_interims", (DL_FUNC) &_OrvacRCT_get_interims, 2},
     {"_OrvacRCT_nothing_much", (DL_FUNC) &_OrvacRCT_nothing_much, 0},
     {"_OrvacRCT_test_trial1", (DL_FUNC) &_OrvacRCT_test_trial1, 0},
     {"_OrvacRCT_test_trial2", (DL_FUNC) &_OrvacRCT_test_trial2, 0},

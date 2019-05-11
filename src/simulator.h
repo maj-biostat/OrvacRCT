@@ -32,10 +32,17 @@
 #define COL_LAMB1         1
 #define COL_RATIO         2
 
+#define INT_I_START       0
+#define INT_I_END         1
+#define INT_T_START       2
+#define INT_T_END         3
+
 // function prototypes
 
 arma::mat get_trial_dat(const Rcpp::List& cfg);
-
+arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg);
+  
+  
 // Rcpp::List rcpp_clin(arma::mat& d, const Rcpp::List& cfg,
 //                      const int look, const int idxsim);
 // Rcpp::List rcpp_clin_set_state(arma::mat& d, const int look,

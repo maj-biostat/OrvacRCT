@@ -5,6 +5,10 @@ get_trial_dat <- function(cfg) {
     .Call(`_OrvacRCT_get_trial_dat`, cfg)
 }
 
+get_interims <- function(d, cfg) {
+    .Call(`_OrvacRCT_get_interims`, d, cfg)
+}
+
 nothing_much <- function() {
     invisible(.Call(`_OrvacRCT_nothing_much`))
 }

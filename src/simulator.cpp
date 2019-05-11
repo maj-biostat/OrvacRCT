@@ -33,26 +33,25 @@
 // [[Rcpp::export]]
 arma::mat get_trial_dat(const Rcpp::List& cfg) {
 
-  int n = cfg["nstop"];
+  int n = (int)cfg["n_stop"];
   arma::mat d = arma::zeros(n, NCOL);
-  double tpp = (double)cfg["months_per_person"];
 
   for(int i = 0; i < n; i++){
     
-    d(i, COL_ID) = i+1;
+    d(i, COL_ID) = i;
     d(i, COL_TRT) = ((i-1)%2 == 0) ? 0 : 1;
     // poisson proc
     if(i == 0) {
-      d(i, COL_ACCRT) = R::rexp(1/(double)cfg["people_per_interim_period"])  ;  
+      d(i, COL_ACCRT) = R::rexp(1/(double)cfg["accrual"])  ;  
     } else {
-      d(i, COL_ACCRT) = d(i-1, COL_ACCRT) + R::rexp(1/(double)cfg["people_per_interim_period"])  ;  
+      d(i, COL_ACCRT) = d(i-1, COL_ACCRT) + R::rexp(1/(double)cfg["accrual"])  ;  
     }
     
     d(i, COL_AGE) = R::runif((double)cfg["age_months_lwr"], (double)cfg["age_months_upr"]);
     
-    d(i, COL_SEROT2) = R::rbinom(1, cfg["baselineprobsero"]);
+    d(i, COL_SEROT2) = R::rbinom(1, cfg["baseline_prob_sero"]);
     d(i, COL_SEROT3) = d(i, COL_SEROT2);
-    d(i, COL_PROBT3) = d(i, COL_TRT) * (double)cfg["deltaserot3"];
+    d(i, COL_PROBT3) = d(i, COL_TRT) * (double)cfg["delta_sero_t3"];
     
     if(d(i, COL_SEROT2) == 0 && d(i, COL_TRT) == 1){
       d(i, COL_SEROT3) = R::rbinom(1, d(i, COL_PROBT3));
@@ -62,24 +61,92 @@ arma::mat get_trial_dat(const Rcpp::List& cfg) {
     // event time is the time from randomisation (not birth) at which first
     // medical presentation occurs
     if(d(i, COL_TRT) == 0){
-      d(i, COL_EVTT) = R::rexp(1/(double)cfg["b0tte"])  ;
+      d(i, COL_EVTT) = R::rexp(1/(double)cfg["b0_tte"])  ;
     } else {
-      double beta = (double)cfg["b0tte"] + (double)cfg["b1tte"];
+      double beta = (double)cfg["b0_tte"] + (double)cfg["b1_tte"];
       d(i, COL_EVTT) = R::rexp(1/beta)  ;
     }
     
   }
   
-  d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
-  d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
-  d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
-  d.col(COL_IMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
-  d.col(COL_REFTIME) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
+  d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_IMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_REFTIME) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   
   return d;
 }
 
 
+// [[Rcpp::export]]
+arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg){
+  
+  // interims occur at index INT_I_END at time INT_T_END
+  // an interim uses kids from 0 to INT_I_END with 
+  // kids at index INT_I_START to INT_I_END being introduced
+  // for this interim.
+  
+  int n = (int)cfg["n_stop"];
+  int n_start = (int)cfg["n_start"] - 1;
+  
+  // I resize later
+  arma::mat intrms = arma::zeros(300, 4);
+  
+  intrms(0, INT_I_START) = 0;
+  intrms(0, INT_I_END) = n_start;                // 69
+  intrms(0, INT_T_START) = 0;
+  intrms(0, INT_T_END) = d(n_start, COL_ACCRT);  // accrual for 69
+
+  intrms(1, INT_I_START) = intrms(0, INT_I_END) + 1;    // 70
+  intrms(1, INT_T_START) = intrms(0, INT_T_END);        // accrual for 69
+  
+  int k = 2;
+  int i = 0;
+  
+  for(i = intrms(1, INT_I_START) + 1; i < n; i++){
+    
+    // every three months or next 50, whichever sooner
+    // start the clock from the accrual of the previous kid
+    if(d(i, COL_ACCRT) - intrms(k-1, INT_T_START) >= (double)cfg["int_mnth"]  |  
+      d(i, COL_ID) - intrms(k-1, INT_I_START)  >= (int)cfg["int_n"]-1) {
+
+      intrms(k-1, INT_I_END) = i;
+      // start the clock from the accrual of the previous kid
+      intrms(k-1, INT_T_END) = d(i, COL_ACCRT);
+      
+      intrms(k, INT_I_START) = intrms(k-1, INT_I_END) + 1;
+      // start the clock from the accrual of the previous kid
+      intrms(k, INT_T_START) = intrms(k-1, INT_T_END);
+
+      k++;
+    }
+  }
+  
+  // Rcpp::Rcout  << " k-2 " << k - 2 << " intrms row k-2 " << intrms.row(k-2) << std::endl;
+  // Rcpp::Rcout  << " k-1 " << k - 1 << " intrms row k-1 " << intrms.row(k-1) << std::endl;
+  // Rcpp::Rcout  << " k   " << k  << " intrms row k   " << intrms.row(k) << std::endl;
+  
+  int z = 0;
+  int ilast = (int)intrms(k, INT_I_END);
+
+  while(ilast == 0 | ilast == n-1){
+    
+    // Rcpp::Rcout << "entry at intrms(" << k << ", INT_I_END) = " 
+    //   << " is " << intrms(k, INT_I_END) << std::endl;
+    
+    k = k - 1;
+    ilast = (int)intrms(k, INT_I_END);
+    
+    z++;
+    if(z > 10) break;
+  }
+  
+  intrms.resize(k+1, 4);
+  
+  return intrms;
+  
+}
 
 // [[Rcpp::export]]
 void nothing_much() {
