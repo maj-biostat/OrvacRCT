@@ -1,46 +1,33 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include <RcppDist.h>
-// [[Rcpp::depends(RcppDist)]]
-
-#include <cmath>
-#include <algorithm>
 
 
-// column indices
-#define COL_ID            0
-#define COL_TRT           1
-#define COL_ACCRT         2
-#define COL_AGE           3
-#define COL_SEROT2        4
-#define COL_SEROT3        5
-#define COL_PROBT3        6
-#define COL_EVTT          7
-#define COL_CEN           8
-#define COL_OBST          9
-#define COL_REASON        10
-#define COL_IMPUTE        11
-#define COL_REFTIME       12
-#define NCOL              13
-
-#define COL_THETA0        0
-#define COL_THETA1        1
-#define COL_DELTA         2
-
-#define COL_LAMB0         0
-#define COL_LAMB1         1
-#define COL_RATIO         2
-
-#define INT_I_START       0
-#define INT_I_END         1
-#define INT_T_START       2
-#define INT_T_END         3
-
+Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);
+  
+  
 // function prototypes
+// void trial_print(const Rcpp::List& cfg);
+// Rcpp::List trial_as_list(const Rcpp::List& cfg);
 
-arma::mat get_trial_dat(const Rcpp::List& cfg);
-arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg);
+
+
+// Rcpp::List simulate_trial(const int idxsim, 
+//   const Rcpp::List& cfg,
+//   const bool rtn_trial_dat);
+
+
+// void run_interims(Trial& t);
+// 
+// void clin_intrm(Trial& t);
+// void clin_set_state(Trial& t);  
+//   
+//   
+//   
+// Rcpp::List run_fin(Trial& t);
+
+// arma::mat get_trial_dat(const Rcpp::List& cfg);
+// arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg);
   
   
 // Rcpp::List rcpp_clin(arma::mat& d, const Rcpp::List& cfg,
@@ -96,6 +83,8 @@ arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg);
 //                         const bool rtn_trial_dat);
 
 // end function prototypes
+
+
 
 
 #endif

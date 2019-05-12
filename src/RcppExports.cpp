@@ -6,83 +6,22 @@
 
 using namespace Rcpp;
 
-// get_trial_dat
-arma::mat get_trial_dat(const Rcpp::List& cfg);
-RcppExport SEXP _OrvacRCT_get_trial_dat(SEXP cfgSEXP) {
+// simulate_trial
+Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);
+RcppExport SEXP _OrvacRCT_simulate_trial(SEXP idxsimSEXP, SEXP cfgSEXP, SEXP rtn_trial_datSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type cfg(cfgSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_trial_dat(cfg));
+    Rcpp::traits::input_parameter< int >::type idxsim(idxsimSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
+    Rcpp::traits::input_parameter< bool >::type rtn_trial_dat(rtn_trial_datSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_trial(idxsim, cfg, rtn_trial_dat));
     return rcpp_result_gen;
-END_RCPP
-}
-// get_interims
-arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg);
-RcppExport SEXP _OrvacRCT_get_interims(SEXP dSEXP, SEXP cfgSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type d(dSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type cfg(cfgSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_interims(d, cfg));
-    return rcpp_result_gen;
-END_RCPP
-}
-// nothing_much
-void nothing_much();
-RcppExport SEXP _OrvacRCT_nothing_much() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    nothing_much();
-    return R_NilValue;
-END_RCPP
-}
-// test_trial1
-void test_trial1();
-RcppExport SEXP _OrvacRCT_test_trial1() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    test_trial1();
-    return R_NilValue;
-END_RCPP
-}
-// test_trial2
-void test_trial2();
-RcppExport SEXP _OrvacRCT_test_trial2() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    test_trial2();
-    return R_NilValue;
-END_RCPP
-}
-// test_trial3
-void test_trial3();
-RcppExport SEXP _OrvacRCT_test_trial3() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    test_trial3();
-    return R_NilValue;
-END_RCPP
-}
-// test_trial4
-void test_trial4();
-RcppExport SEXP _OrvacRCT_test_trial4() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    test_trial4();
-    return R_NilValue;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_OrvacRCT_get_trial_dat", (DL_FUNC) &_OrvacRCT_get_trial_dat, 1},
-    {"_OrvacRCT_get_interims", (DL_FUNC) &_OrvacRCT_get_interims, 2},
-    {"_OrvacRCT_nothing_much", (DL_FUNC) &_OrvacRCT_nothing_much, 0},
-    {"_OrvacRCT_test_trial1", (DL_FUNC) &_OrvacRCT_test_trial1, 0},
-    {"_OrvacRCT_test_trial2", (DL_FUNC) &_OrvacRCT_test_trial2, 0},
-    {"_OrvacRCT_test_trial3", (DL_FUNC) &_OrvacRCT_test_trial3, 0},
-    {"_OrvacRCT_test_trial4", (DL_FUNC) &_OrvacRCT_test_trial4, 0},
+    {"_OrvacRCT_simulate_trial", (DL_FUNC) &_OrvacRCT_simulate_trial, 3},
     {NULL, NULL, 0}
 };
 
