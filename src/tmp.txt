@@ -1,0 +1,798 @@
+// set censoring and event times up to the current interim
+  // in this instance we do no imputation - this is purely for the
+  // posterior at the current interim (no predictive probs.)
+  // for(int sub_idx = 0; sub_idx < n_target; sub_idx++){
+  //   
+  //   DBG(Rcpp::Rcout, "STARTING set state for sub_idx " << sub_idx);
+  // 
+  //   DBG(Rcpp::Rcout, " ref_time     "  << d(sub_idx, COL_REFTIME)); 
+  //   DBG(Rcpp::Rcout, " acc + evt    "  << d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT)); 
+  //   DBG(Rcpp::Rcout, " age + evt    "  << d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT));
+  //   DBG(Rcpp::Rcout, " ref - acc    "  << d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT));
+  //   DBG(Rcpp::Rcout, " agemax - age "  << (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE));
+  //   
+  //   d(sub_idx, COL_REFTIME) = ref_time;
+  //   
+  //   if(ref_time < (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) + 
+  //     d(sub_idx, COL_ACCRT)){
+  //     
+  //     DBG(Rcpp::Rcout, " max fu is after reftime for sub " << sub_idx); 
+  //     
+  //     d(sub_idx, COL_REFTIME) = (double)cfg["max_age_fu"] - 
+  //       d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT);
+  //   } else{
+  //     d(sub_idx, COL_REFTIME) = ref_time;
+  //   }
+  //   
+  //   DBG(Rcpp::Rcout, " ref_time     "  << d(sub_idx, COL_REFTIME)); 
+  //   DBG(Rcpp::Rcout, " acc + evt    "  << d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT)); 
+  //   DBG(Rcpp::Rcout, " age + evt    "  << d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT));
+  //   DBG(Rcpp::Rcout, " ref - acc    "  << d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT));
+  //   DBG(Rcpp::Rcout, " agemax - age "  << (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE));
+  //   
+  //   if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME)){
+  //     
+  //     DBG(Rcpp::Rcout, " evtt before reftime " );
+  //     
+  //     if(d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) <= (double)cfg["max_age_fu"]){
+  //       // observed event
+  //       DBG(Rcpp::Rcout, " evtt occurred before too old" );
+  //       
+  //       d(sub_idx, COL_CEN) = 0;
+  //       d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
+  //       d(sub_idx, COL_REASON) = 1;
+  //       d(sub_idx, COL_IMPUTE) = 0;
+  // 
+  //       if(d(sub_idx, COL_TRT) == 0) {
+  //         n_evnt_0 += 1;
+  //       } else {
+  //         n_evnt_1 += 1;
+  //       }
+  //       
+  //     } else {
+  //       
+  //       DBG(Rcpp::Rcout, " evtt after too old" );
+  //       
+  //       if(d(sub_idx, COL_REFTIME) <
+  //                 d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
+  //       
+  //         // censor at mnth - accrual
+  //         DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
+  //         
+  //         d(sub_idx, COL_CEN) = 1;
+  //         d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
+  //         d(sub_idx, COL_REASON) = 3;
+  //         d(sub_idx, COL_IMPUTE) = 1;
+  //       
+  //       } else {
+  //         
+  //         DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
+  //         
+  //         d(sub_idx, COL_CEN) = 1;
+  //         d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
+  //         d(sub_idx, COL_REASON) = 4;
+  //         d(sub_idx, COL_IMPUTE) = 0;
+  //       }
+  // 
+  //     }
+  // 
+  //   } else {
+  //     
+  //     DBG(Rcpp::Rcout, " evtt after reftime " );
+  // 
+  //     if(d(sub_idx, COL_REFTIME) <
+  //         d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
+  //       
+  //       // censor at mnth - accrual
+  //       DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
+  //       
+  //       d(sub_idx, COL_CEN) = 1;
+  //       d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
+  //       d(sub_idx, COL_REASON) = 3;
+  //       d(sub_idx, COL_IMPUTE) = 1;
+  //     
+  //     } else {
+  //       
+  //       DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
+  //       
+  //       d(sub_idx, COL_CEN) = 1;
+  //       d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
+  //       d(sub_idx, COL_REASON) = 4;
+  //       d(sub_idx, COL_IMPUTE) = 0;
+  //     }
+  // 
+  //   }
+  // 
+  //   if(d(sub_idx, COL_TRT) == 0) {
+  //     tot_obst_0 = tot_obst_0 + d(sub_idx, COL_OBST);
+  //   } else {
+  //     tot_obst_1 = tot_obst_1 + d(sub_idx, COL_OBST);
+  //   }
+  // }
+  
+  // Rcpp::Rcout << d << std::endl;
+
+  // Rcpp::List ret = Rcpp::List::create(Rcpp::Named("n_evnt_0") = n_evnt_0,
+  //                          Rcpp::Named("tot_obst_0") = tot_obst_0,
+  //                          Rcpp::Named("n_evnt_1") = n_evnt_1,
+  //                          Rcpp::Named("tot_obst_1") = tot_obst_1);
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+// set censoring status up to participant n_target (1 to 1000)
+// with or without fu.
+// ref_time is an absolute time corresponding to the time of the 
+// interim or final analysis.
+// in the case of the final analysis is_final should be set to true 
+// and ref_time should be set to zero as it is not used.
+Rcpp::List Trial::clin_set_state(int n_target, double ref_time){
+
+  int n_evnt_0 = 0;
+  int n_evnt_1 = 0;
+  double tot_obst_0 = 0;
+  double tot_obst_1 = 0;
+
+  // set censoring and event times up to current enrolled
+  // these kids were all enrolled prior to the current look
+  for(int sub_idx = 0; sub_idx < n_target; sub_idx++){
+    
+    DBG(Rcpp::Rcout, "STARTING set state for sub_idx " << sub_idx);
+
+    // if we are looking at the max sample size it means
+    // we are either imputing to the max or doing a final 
+    // analysis. either way the correct ref_time with which
+    // to assess censoring is the time at which the 
+    // individual is 36 months.
+    if(n_target == d.n_rows || is_final == 1){
+      
+      DBG(Rcpp::Rcout, " max size or at final - update reftime");
+      ref_time = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) +
+        d(sub_idx, COL_ACCRT);
+   
+    }
+ 
+    // if we are not doing follow up then we are dealing with an
+    // interim and we want to assess everyone relative to the
+    // time of the interim.
+    if(dofu == 0){
+      DBG(Rcpp::Rcout, " no fu leaving ref_time as is");
+      d(sub_idx, COL_REFTIME) = ref_time;
+      
+    } else {
+
+      DBG(Rcpp::Rcout, " updating ref_time, fu until 36 mnths " );
+      d(sub_idx, COL_REFTIME) = (double)cfg["max_age_fu"] - 
+          d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT);
+      
+      // if((double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) + 
+      //   d(sub_idx, COL_ACCRT) > ref_time){
+      //   
+      //   DBG(Rcpp::Rcout, " updating ref_time, fu until 36 mnths " );
+      //   d(sub_idx, COL_REFTIME) = (double)cfg["max_age_fu"] - 
+      //     d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT);
+      //   
+      // } else {
+      //   
+      //   DBG(Rcpp::Rcout, " fu but leaving ref_time as is");
+      //   d(sub_idx, COL_REFTIME) = ref_time;
+      //   
+      // }
+
+    }
+
+    DBG(Rcpp::Rcout, " ref_time     "  << d(sub_idx, COL_REFTIME)); 
+    DBG(Rcpp::Rcout, " acc + evt    "  << d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT)); 
+    DBG(Rcpp::Rcout, " age + evt    "  << d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT));
+    DBG(Rcpp::Rcout, " ref - acc    "  << d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT));
+    DBG(Rcpp::Rcout, " agemax - age "  << (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE));
+    
+    if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME)){
+      
+      DBG(Rcpp::Rcout, " evtt before reftime " );
+      
+      if(d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) <= (double)cfg["max_age_fu"]){
+        // observed event
+        // dont impute
+        
+        DBG(Rcpp::Rcout, " observed event" );
+        
+        d(sub_idx, COL_CEN) = 0;
+        d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
+        d(sub_idx, COL_REASON) = 1;
+        d(sub_idx, COL_IMPUTE) = 0;
+  
+        if(d(sub_idx, COL_TRT) == 0) {
+          n_evnt_0 += 1;
+        } else {
+          n_evnt_1 += 1;
+        }
+        
+      } else {
+
+        // censor at max age
+        // dont impute
+        
+        DBG(Rcpp::Rcout, " censored - too old" );
+        
+        d(sub_idx, COL_CEN) = 1;
+        d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE);
+        d(sub_idx, COL_REASON) = 2;
+        d(sub_idx, COL_IMPUTE) = 0;
+      }
+
+    } else {
+      
+      DBG(Rcpp::Rcout, " evtt after reftime " );
+      // if (d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) > d(sub_idx, COL_REFTIME)
+      
+      if(d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) <
+                  (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE)){
+        
+        // censor at mnth - accrual (t2)
+        // impute
+        
+        DBG(Rcpp::Rcout, " censored - but at ref_time not yet too old so impute" );
+        
+        d(sub_idx, COL_CEN) = 1;
+        d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
+        d(sub_idx, COL_REASON) = 3;
+        d(sub_idx, COL_IMPUTE) = 1;
+        
+      } else {
+        
+        DBG(Rcpp::Rcout, " censored - and is too old to bother imputing" );
+        
+        d(sub_idx, COL_CEN) = 1;
+        d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
+        d(sub_idx, COL_REASON) = 4;
+        d(sub_idx, COL_IMPUTE) = 0;
+      }
+      
+    }
+
+    if(d(sub_idx, COL_TRT) == 0) {
+      tot_obst_0 = tot_obst_0 + d(sub_idx, COL_OBST);
+    } else {
+      tot_obst_1 = tot_obst_1 + d(sub_idx, COL_OBST);
+    }
+  }
+  
+  // Rcpp::Rcout << d << std::endl;
+
+  Rcpp::List ret = Rcpp::List::create(Rcpp::Named("n_evnt_0") = n_evnt_0,
+                           Rcpp::Named("tot_obst_0") = tot_obst_0,
+                           Rcpp::Named("n_evnt_1") = n_evnt_1,
+                           Rcpp::Named("tot_obst_1") = tot_obst_1,
+                           Rcpp::Named("dofu") = dofu);
+  
+  return ret;
+}
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+void run_interims(){
+
+  int i = 0;
+  for(i = 0; i < n_interims();  i++){
+    
+    // keep track of how many currently enrolled
+    set_enrolled_ss(get_interim_n(i));
+    
+    if(do_clin()){
+      
+      INFO(Rcpp::Rcout, idxsim, "doing clin, with " << get_enrolled_ss()
+            << " enrld and thresh_p_win " << get_thresh_p_win()
+            << ", thresh_ppos " << get_thresh_ppos()
+            << ", thresh_p_fut " << get_thresh_p_fut());
+      
+      //clin_intrm(d, cfg, t, idxsim);
+      
+      // Rcpp::Rcout << " run_interims t.get_c_ppos_n() " 
+      //             << t.get_c_ppos_n() << std::endl;
+      
+      // m_clin_res = rcpp_clin(d, cfg, look, idxsim);
+      // 
+      // // INFO(Rcpp::Rcout, idxsim, "blah " << (double)m_clin_res["ratio"] << " "
+      // // << (double)m_clin_res["lwr"] << " "
+      // // << (double)m_clin_res["upr"] );
+      // 
+      // if((double)m_clin_res["ppmax"] < (double)cfg["pp_tte_fut_thresh"]){
+      //   INFO(Rcpp::Rcout, idxsim, "clin futile - stopping now, ppmax " << (double)m_clin_res["ppmax"] << " fut thresh " << (double)cfg["pp_tte_fut_thresh"]);
+      //   t.clin_fut();
+      //   break;
+      // }
+      // 
+      // if ((double)m_clin_res["ppn"] > (double)post_tte_sup_thresh[i]  && !t.is_clin_fut()){
+      //   INFO(Rcpp::Rcout, idxsim, "clin sup - stopping now, ppn " << (double)m_clin_res["ppn"] << " sup thresh " << (double)post_tte_sup_thresh[i] );
+      //   t.clin_sup();
+      //   break;
+      // }
+    }
+  }
+  
+  
+  //Rcpp::List ret = Rcpp::List::create(Rcpp::Named("trial") = t);
+  return;
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// void clin_intrm(Trial& t) {
+// 
+//   // arma::mat d_new ;
+//   
+//   arma::mat m = arma::zeros((int)cfg["post_draw"] , 3);
+//   arma::mat m_pp_int = arma::zeros((int)cfg["post_draw"] , 3);
+//   arma::mat m_pp_max = arma::zeros((int)cfg["post_draw"] , 3);
+//   
+//   // arma::uvec uimpute;
+//   // arma::uvec ugt1;
+//   // arma::vec ppos_int_ratio_gt1 = arma::zeros(post_draw);
+//   // arma::vec ppos_max_ratio_gt1 = arma::zeros(post_draw);
+//   // 
+//   // // compute suff stats (calls visits and censoring) for the current interim
+//   // d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
+//   // d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["nstop"]));
+//   // 
+//   Rcpp::List lss_post = clin_set_state(d, look, months[mylook], cfg);
+//   // int n_evnt_0 = (double)lss_post["n_evnt_0"];
+//   // int n_evnt_1 = (double)lss_post["n_evnt_1"];
+//   // double tot_obst_0 = (double)lss_post["tot_obst_0"];
+//   // double tot_obst_1 = (double)lss_post["tot_obst_1"];
+//   // 
+//   // Rcpp::List lss_int;
+//   // Rcpp::List lss_max;
+//   // 
+//   // // keep a copy of the original state
+//   // d_new = arma::mat(d);
+//   // arma::mat d_orig = arma::zeros((int)cfg["nstop"], 6);
+//   // d_orig.col(0) = arma::vec(d.col(COL_EVTT));
+//   // d_orig.col(1) = arma::vec(d.col(COL_CEN));
+//   // d_orig.col(2) = arma::vec(d.col(COL_OBST));
+//   // d_orig.col(3) = arma::vec(d.col(COL_REASON));
+//   // d_orig.col(4) = arma::vec(d.col(COL_IMPUTE));
+//   // d_orig.col(5) = arma::vec(d.col(COL_REFTIME));
+//   // 
+//   // // subjs that require imputation
+//   // uimpute = arma::find(d.col(COL_IMPUTE) == 1);
+//   // 
+//   // arma::mat d1 = arma::mat(d);
+//   // arma::mat d2 ;
+//   // arma::mat d3 ;
+//   // 
+//   // for i in postdraws do posterior predictive trials
+//   // 1. for the interim (if we are at less than 50 per qtr)
+//   // 2. for the max sample size
+//   // for(int i = 0; i < (int)cfg["post_draw"]; i++){
+//   // 
+//   //   // compute the posterior based on the __observed__ data to the time of the interim
+//   //   // take single draw
+//   //   m(i, COL_LAMB0) = R::rgamma(a + n_evnt_0, 1/(b + tot_obst_0));
+//   //   m(i, COL_LAMB1) = R::rgamma(a + n_evnt_1, 1/(b + tot_obst_1));
+//   //   m(i, COL_RATIO) = m(i, COL_LAMB0) / m(i, COL_LAMB1);
+//   // 
+//   //   // use memoryless prop of exponential and impute enrolled kids that have not
+//   //   // yet had event.
+//   //   for(int j = 0; j < (int)uimpute.n_elem; j++){
+//   //     int sub_idx = uimpute(j);
+//   //     if(d(sub_idx, COL_TRT) == 0){
+//   //       d(sub_idx, COL_EVTT) = d(sub_idx, COL_OBST) + R::rexp(1/m(i, COL_LAMB0))  ;
+//   //     } else {
+//   //       d(sub_idx, COL_EVTT) = d(sub_idx, COL_OBST) + R::rexp(1/m(i, COL_LAMB1))  ;
+//   //     }
+//   //   }
+//   // 
+//   //   // update view of the sufficent stats using enrolled
+//   //   // kids that have all now been given an event time
+//   //   lss_int = rcpp_clin_set_state(d, look, months[mylook] + fu_36, cfg);
+//   //   d2 = arma::mat(d);
+//   //   for(int j = 0; j < post_draw; j++){
+//   //     m_pp_int(j, COL_LAMB0) = R::rgamma(a + (double)lss_int["n_evnt_0"], 1/(b + (double)lss_int["tot_obst_0"]));
+//   //     m_pp_int(j, COL_LAMB1) = R::rgamma(a + (double)lss_int["n_evnt_1"], 1/(b + (double)lss_int["tot_obst_1"]));
+//   //     m_pp_int(j, COL_RATIO) = m_pp_int(j, COL_LAMB0) / m_pp_int(j, COL_LAMB1);
+//   //   }
+//   //   // empirical posterior probability that ratio_lamb > 1
+//   //   ugt1 = arma::find(m_pp_int.col(COL_RATIO) > 1);
+//   //   ppos_int_ratio_gt1(i) =  (double)ugt1.n_elem / (double)post_draw;
+//   // 
+//   //   // impute the remaining kids
+//   //   //DBG(Rcpp::Rcout, "from " << looks[mylook] << " to " << max(looks));
+//   // 
+//   //   for(int k = looks[mylook]; k < max(looks); k++){
+//   //     if(d(k, COL_TRT) == 0){
+//   //       d(k, COL_EVTT) = R::rexp(1/m(i, COL_LAMB0))  ;
+//   //     } else {
+//   //       d(k, COL_EVTT) = R::rexp(1/m(i, COL_LAMB1))  ;
+//   //     }
+//   //   }
+//   //   //DBG(Rcpp::Rcout, "d last " << d(max(looks)-1, COL_OBST) );
+//   // 
+//   //   // set the state up to the max sample size at time of the final analysis
+//   //   lss_max = rcpp_clin_set_state(d, looks.length(), max(months) + fu_36, cfg);
+//   //   d3 = arma::mat(d);
+//   // 
+//   //   // what does the posterior at max sample size say?
+//   //   for(int j = 0; j < post_draw; j++){
+//   //     m_pp_max(j, COL_LAMB0) = R::rgamma(a + (double)lss_max["n_evnt_0"], 1/(b + (double)lss_max["tot_obst_0"]));
+//   //     m_pp_max(j, COL_LAMB1) = R::rgamma(a + (double)lss_max["n_evnt_1"], 1/(b + (double)lss_max["tot_obst_1"]));
+//   //     m_pp_max(j, COL_RATIO) = m_pp_max(j, COL_LAMB0) / m_pp_max(j, COL_LAMB1);
+//   //   }
+//   //   // empirical posterior probability that ratio_lamb > 1
+//   //   ugt1 = arma::find(m_pp_max.col(COL_RATIO) > 1);
+//   //   ppos_max_ratio_gt1(i) =  (double)ugt1.n_elem / (double)post_draw;
+//   // 
+//   //   // reset to original state ready for the next posterior draw
+//   //   d.col(COL_EVTT) = arma::vec(d_orig.col(0));
+//   //   d.col(COL_CEN) = arma::vec(d_orig.col(1));
+//   //   d.col(COL_OBST) = arma::vec(d_orig.col(2));
+//   //   d.col(COL_REASON) = arma::vec(d_orig.col(3));
+//   //   d.col(COL_IMPUTE) = arma::vec(d_orig.col(4));
+//   //   d.col(COL_REFTIME) = arma::vec(d_orig.col(5));
+//   // 
+//   // }
+//   // 
+//   // double ppn = arma::mean(ppos_int_ratio_gt1);
+//   // double ppmax = arma::mean(ppos_max_ratio_gt1);
+//   // 
+//   // INFO(Rcpp::Rcout, idxsim, "clin: ppn " << ppn << " ppmax " << ppmax);
+//   // 
+//   // // Rcpp::List ret = Rcpp::List::create(Rcpp::Named("ppn") = ppn,
+//   // //                               Rcpp::Named("ppmax") = ppmax,
+//   // //                               Rcpp::Named("lss_post") = lss_post,
+//   // //                               Rcpp::Named("lss_int") = lss_int,
+//   // //                               Rcpp::Named("lss_max") = lss_max,
+//   // //                               Rcpp::Named("m") = m,
+//   // //                               Rcpp::Named("m_pp_int") = m_pp_int,
+//   // //                               Rcpp::Named("m_pp_max") = m_pp_max,
+//   // //                               Rcpp::Named("ppos_int_ratio_gt1") = ppos_int_ratio_gt1,
+//   // //                               Rcpp::Named("ppos_max_ratio_gt1") = ppos_max_ratio_gt1,
+//   // //                               Rcpp::Named("d1") = d1,
+//   // //                               Rcpp::Named("d2") = d2,
+//   // //                               Rcpp::Named("d3") = d3);
+//   // 
+//   // Rcpp::List ret = Rcpp::List::create(Rcpp::Named("ppn") = ppn,
+//   //                               Rcpp::Named("ppmax") = ppmax,
+//   //                               Rcpp::Named("lss_post") = lss_post,
+//   //                               Rcpp::Named("lss_int") = lss_int,
+//   //                               Rcpp::Named("lss_max") = lss_max);
+// 
+//   // Rcpp::List ret = Rcpp::List::create(Rcpp::Named("ppmax") = 0);
+// 
+//   return ;
+// }      
+// void clin_set_state(Trial& t){
+// 
+//   // this updates the state of d in place
+//   // and provides sufficient stats.
+// 
+//   int mylook = look - 1;
+//   double fudge = 0.0001;
+// 
+//   int n_evnt_0 = 0;
+//   int n_evnt_1 = 0;
+//   double tot_obst_0 = 0;
+//   double tot_obst_1 = 0;
+// 
+//   double a = (double)cfg["prior_gamma_a"];
+//   double b = (double)cfg["prior_gamma_b"];
+// 
+//   Rcpp::NumericVector looks = cfg["looks"];
+//   Rcpp::NumericVector months = cfg["interimmnths"];
+//   Rcpp::List lsuffstat;
+// 
+//   arma::uvec utmp;
+// 
+//   // set censoring and event times up to current enrolled
+//   // these kids were all enrolled prior to the current look
+//   for(int sub_idx = 0; sub_idx < looks[mylook]; sub_idx++){
+// 
+//     if(fu == 0){
+//       d(sub_idx, COL_REFTIME) = months[mylook];
+//     } else {
+// 
+//       if(fu - d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT) > months[mylook]){
+//         d(sub_idx, COL_REFTIME) = fu - d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT);
+//       } else {
+//         d(sub_idx, COL_REFTIME) = months[mylook];
+//       }
+// 
+//     }
+//     DBG(Rcpp::Rcout, "d(sub_idx, COL_REFTIME) " << d(sub_idx, COL_REFTIME) );
+// 
+//     if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME) &&
+//       d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) <= (double)cfg["max_age_fu_months"]){
+//       // observed event
+//       // dont impute
+//       d(sub_idx, COL_CEN) = 0;
+//       d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
+//       d(sub_idx, COL_REASON) = 1;
+//       d(sub_idx, COL_IMPUTE) = 0;
+// 
+//       if(d(sub_idx, COL_TRT) == 0) {
+//         n_evnt_0 += 1;
+//       } else {
+//         n_evnt_1 += 1;
+//       }
+// 
+//     } else if (d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME) &&
+//       d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) > (double)cfg["max_age_fu_months"]){
+//       // censor at max age
+//       // dont impute
+//       d(sub_idx, COL_CEN) = 1;
+//       d(sub_idx, COL_OBST) = (double)cfg["max_age_fu_months"] - d(sub_idx, COL_AGE);
+//       d(sub_idx, COL_REASON) = 2;
+//       d(sub_idx, COL_IMPUTE) = 0;
+// 
+//     } else if (d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) > d(sub_idx, COL_REFTIME) &&
+//       d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) <=
+//                   (double)cfg["max_age_fu_months"] - d(sub_idx, COL_AGE)){
+//       // censor at mnth - accrual (t2)
+//       // impute
+//       d(sub_idx, COL_CEN) = 1;
+//       d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
+//       d(sub_idx, COL_REASON) = 3;
+//       d(sub_idx, COL_IMPUTE) = 1;
+// 
+//     } else { // mnth - accrual >= max age - age at accrual
+//       // censor at max age
+//       // dont impute
+//       d(sub_idx, COL_CEN) = 1;
+//       d(sub_idx, COL_OBST) = (double)cfg["max_age_fu_months"] - d(sub_idx, COL_AGE) ;
+//       d(sub_idx, COL_REASON) = 4;
+//       d(sub_idx, COL_IMPUTE) = 0;
+// 
+//     }
+// 
+//     if(d(sub_idx, COL_TRT) == 0) {
+//       tot_obst_0 = tot_obst_0 + d(sub_idx, COL_OBST);
+//     } else {
+//       tot_obst_1 = tot_obst_1 + d(sub_idx, COL_OBST);
+//     }
+//   }
+// 
+//   Rcpp::List ret = Rcpp::List::create(Rcpp::Named("n_evnt_0") = n_evnt_0,
+//                            Rcpp::Named("tot_obst_0") = tot_obst_0,
+//                            Rcpp::Named("n_evnt_1") = n_evnt_1,
+//                            Rcpp::Named("tot_obst_1") = tot_obst_1,
+//                            Rcpp::Named("fu") = fu);
+// 
+//   return ret;
+// }
+      
+      
+      
+      
+//   // i// [[Rcpp::export]]
+// arma::mat get_trial_dat(const Rcpp::List& cfg) {
+// 
+//   int n = (int)cfg["n_stop"];
+//   arma::mat d = arma::zeros(n, NCOL);
+// 
+//   for(int i = 0; i < n; i++){
+//     
+//     d(i, COL_ID) = i;
+//     d(i, COL_TRT) = ((i-1)%2 == 0) ? 0 : 1;
+//     // poisson proc
+//     if(i == 0) {
+//       d(i, COL_ACCRT) = R::rexp(1/(double)cfg["accrual"])  ;  
+//     } else {
+//       d(i, COL_ACCRT) = d(i-1, COL_ACCRT) + R::rexp(1/(double)cfg["accrual"])  ;  
+//     }
+//     
+//     d(i, COL_AGE) = R::runif((double)cfg["age_months_lwr"], (double)cfg["age_months_upr"]);
+//     
+//     d(i, COL_SEROT2) = R::rbinom(1, cfg["baseline_prob_sero"]);
+//     d(i, COL_SEROT3) = d(i, COL_SEROT2);
+//     d(i, COL_PROBT3) = d(i, COL_TRT) * (double)cfg["delta_sero_t3"];
+//     
+//     if(d(i, COL_SEROT2) == 0 && d(i, COL_TRT) == 1){
+//       d(i, COL_SEROT3) = R::rbinom(1, d(i, COL_PROBT3));
+//     }
+//     
+//     // tte - the paramaterisation of rexp uses SCALE NOTE RATE!!!!!!!!!!!
+//     // event time is the time from randomisation (not birth) at which first
+//     // medical presentation occurs
+//     if(d(i, COL_TRT) == 0){
+//       d(i, COL_EVTT) = R::rexp(1/(double)cfg["b0_tte"])  ;
+//     } else {
+//       double beta = (double)cfg["b0_tte"] + (double)cfg["b1_tte"];
+//       d(i, COL_EVTT) = R::rexp(1/beta)  ;
+//     }
+//     
+//   }
+//   
+//   d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+//   d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+//   d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+//   d.col(COL_IMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+//   d.col(COL_REFTIME) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+//   
+//   return d;
+// }
+
+
+//   // i[[Rcpp::export]]
+// arma::mat get_interims(const arma::mat& d, const Rcpp::List& cfg){
+//   
+//   // interims occur at index INT_I_END at time INT_T_END
+//   // an interim uses kids from 0 to INT_I_END with 
+//   // kids at index INT_I_START to INT_I_END being introduced
+//   // for this interim.
+//   
+//   int n = (int)cfg["n_stop"];
+//   int n_start = (int)cfg["n_start"] - 1;
+//   
+//   // I resize later
+//   arma::mat intrms = arma::zeros(300, 5);
+//   
+//   intrms(0, INT_I_START) = 0;
+//   intrms(0, INT_I_END) = n_start;                // 69
+//   intrms(0, INT_T_START) = 0;
+//   intrms(0, INT_T_END) = d(n_start, COL_ACCRT);  // accrual for 69
+//   intrms(0, INT_N) = intrms(0, INT_I_END) +1;   
+// 
+//   intrms(1, INT_I_START) = intrms(0, INT_I_END) + 1;    // 70
+//   intrms(1, INT_T_START) = intrms(0, INT_T_END);        // accrual for 69
+//   
+//   int k = 2;
+//   int i = 0;
+//   
+//   for(i = intrms(1, INT_I_START) + 1; i < n; i++){
+//     
+//     // every three months or next 50, whichever sooner
+//     // start the clock from the accrual of the previous kid
+//     if(d(i, COL_ACCRT) - intrms(k-1, INT_T_START) >= (double)cfg["int_mnth"]  |  
+//       d(i, COL_ID) - intrms(k-1, INT_I_START)  >= (int)cfg["int_n"]-1) {
+// 
+//       intrms(k-1, INT_I_END) = i;
+//       // start the clock from the accrual of the previous kid
+//       intrms(k-1, INT_T_END) = d(i, COL_ACCRT);
+//       intrms(k-1, INT_N) = intrms(k-1, INT_I_END) + 1;   
+//       
+//       intrms(k, INT_I_START) = intrms(k-1, INT_I_END) + 1;
+//       // start the clock from the accrual of the previous kid
+//       intrms(k, INT_T_START) = intrms(k-1, INT_T_END);
+// 
+//       k++;
+//     }
+//   }
+//   
+//   int z = 0;
+//   int ilast = (int)intrms(k, INT_I_END);
+// 
+//   while(ilast == 0 | ilast == n-1){
+//     
+//     k = k - 1;
+//     ilast = (int)intrms(k, INT_I_END);
+//     
+//     z++;
+//     if(z > 10) break;
+//   }
+//   
+//   intrms.resize(k+1, 5);
+//   
+//   return intrms;
+//   
+// }
+
+
+
+// Rcpp::List run_fin(Trial& t){
+//   
+// 
+//   Rcpp::List ret = Rcpp::List::create(Rcpp::Named("test") = 1);
+//   return ret;
+//     
+// }
+
+   
+   
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Rcpp::Rcout << "This interim uses kids up to idx " 
+//   << intrms(i, INT_I_END) << std::endl;
+// 
+// Rcpp::Rcout << " shall we do immu ? " 
+//             << t.do_immu(intrms(i, INT_I_END)) << std::endl;
+// 
+// Rcpp::Rcout << " shall we do clin ? " 
+//             << t.do_clin(intrms(i, INT_I_END)) << std::endl;
+
+
+
+
+
+void Trial::interim_clin(){}
+void Trial::interim_immu(){}
+
+void Trial::run_final(){}
+void Trial::final_clin(){}
+void Trial::final_immu(){}
+
+
+
+
+  //operator SEXP();
+  
+  arma::mat get_trial_dat();
+  arma::mat get_interims();
+  
+  void run_interims();
+  void interim_clin();
+  void interim_immu();
+  
+  void run_final();
+  void final_clin();
+  void final_immu();
+  
+  
+  
+  

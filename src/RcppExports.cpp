@@ -6,6 +6,32 @@
 
 using namespace Rcpp;
 
+// get_interims
+arma::mat get_interims(Rcpp::List& cfg);
+RcppExport SEXP _OrvacRCT_get_interims(SEXP cfgSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_interims(cfg));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_set_state
+Rcpp::List test_set_state(Rcpp::List& cfg, int n_target, double ref_time, bool dofu, int cur_intrm);
+RcppExport SEXP _OrvacRCT_test_set_state(SEXP cfgSEXP, SEXP n_targetSEXP, SEXP ref_timeSEXP, SEXP dofuSEXP, SEXP cur_intrmSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
+    Rcpp::traits::input_parameter< int >::type n_target(n_targetSEXP);
+    Rcpp::traits::input_parameter< double >::type ref_time(ref_timeSEXP);
+    Rcpp::traits::input_parameter< bool >::type dofu(dofuSEXP);
+    Rcpp::traits::input_parameter< int >::type cur_intrm(cur_intrmSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_set_state(cfg, n_target, ref_time, dofu, cur_intrm));
+    return rcpp_result_gen;
+END_RCPP
+}
 // simulate_trial
 Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);
 RcppExport SEXP _OrvacRCT_simulate_trial(SEXP idxsimSEXP, SEXP cfgSEXP, SEXP rtn_trial_datSEXP) {
@@ -21,6 +47,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_OrvacRCT_get_interims", (DL_FUNC) &_OrvacRCT_get_interims, 1},
+    {"_OrvacRCT_test_set_state", (DL_FUNC) &_OrvacRCT_test_set_state, 5},
     {"_OrvacRCT_simulate_trial", (DL_FUNC) &_OrvacRCT_simulate_trial, 3},
     {NULL, NULL, 0}
 };

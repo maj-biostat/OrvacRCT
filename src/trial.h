@@ -3,25 +3,6 @@
 
 #include <RcppArmadillo.h>
 
-#define _DEBUG 0
-
-#if _DEBUG
-#define DBG( os, msg )                                \
-(os) << "DBG: " << __FILE__ << "(" << __LINE__ << ") "\
-     << msg << std::endl
-#else
-#define DBG( os, msg )
-#endif
-   
-#define _INFO  1
-   
-#if _INFO
-#define INFO( os, i, msg )                                \
-   (os) << "INFO: " << __FILE__ << "(" << __LINE__ << ") "\
-        << " sim = " << i << " " << msg << std::endl
-#else
-#define INFO( os, i, msg )
-#endif
 
 // column indices
 #define COL_ID            0
@@ -61,6 +42,7 @@ private:
   int stop_clin_fut = 0;
   int stop_clin_es = 0;
   int inconclu = 0;
+  
   int nmaxsero = 250;
   int nstartclin = 200;
   
@@ -79,8 +61,10 @@ protected:
   int clin_ss = 0;
   int n_enrolled = 0;
   int idx_cur_intrm = 0;
+  bool is_final = 0;
   
   // sufficient stats for clinical
+  Rcpp::List c_suf_fin;
   Rcpp::List c_suf_intrm;
   Rcpp::List c_suf_intrm_fu;
   Rcpp::List c_suf_max_fu;
@@ -95,18 +79,23 @@ protected:
   double i_p_fin = 0; 
   double c_p_fin = 0;
   
-  arma::mat init_trial_dat();
-  arma::mat get_interims();
-  
-  void clin_interim();
-  Rcpp::List clin_set_state(int n_target, double ref_time, double fu);
-  
+
 public:
   
   Trial(Rcpp::List& trial_cfg, int idxsim);
   
+  arma::mat init_trial_dat();
+  arma::mat get_interims();
+  
+  void clin_interim();
+  Rcpp::List clin_set_state();
+  Rcpp::List clin_set_state(int n_target, double ref_time);
+  
+  void clin_fin();
+  
   void run_interims();
-
+  void run_final();
+  
   bool do_immu();
   bool do_clin();
   
@@ -117,6 +106,8 @@ public:
   void set_enrolled_ss(int n);
   void set_immu_final(bool won);
   void set_clin_final(bool won); 
+  
+  void set_curr_intrm_idx(int cur_intrm);
 
   void set_i_ppos_n(double ppos_n);
   void set_i_ppos_max(double ppos_max);

@@ -1,6 +1,25 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#define _DEBUG 0
+
+#if _DEBUG
+#define DBG( os, msg )                                \
+(os) << "DBG: " << __FILE__ << "(" << __LINE__ << ") "\
+     << msg << std::endl
+#else
+#define DBG( os, msg )
+#endif
+   
+#define _INFO  1
+   
+#if _INFO
+#define INFO( os, i, msg )                                \
+   (os) << "INFO: " << __FILE__ << "(" << __LINE__ << ") "\
+        << " sim = " << i << " " << msg << std::endl
+#else
+#define INFO( os, i, msg )
+#endif
 
 
 Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);

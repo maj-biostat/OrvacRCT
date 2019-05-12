@@ -7,27 +7,38 @@
 #include "trial.h"
 
 
-#define _DEBUG 0
 
-#if _DEBUG
-#define DBG( os, msg )                                \
-(os) << "DBG: " << __FILE__ << "(" << __LINE__ << ") "\
-     << msg << std::endl
-#else
-#define DBG( os, msg )
-#endif
+// [[Rcpp::export]]
+arma::mat get_interims(Rcpp::List& cfg){
+  
+  Trial t(cfg, 1);
+  
+  Rcpp::Rcout << " STARTING TRIAL ID " << 1 << std::endl;
+  
+  return t.get_interims();
+}
    
-#define _INFO  1
+// [[Rcpp::export]]
+Rcpp::List test_set_state(Rcpp::List& cfg,
+  int n_target, double ref_time, bool dofu, int cur_intrm){
+  
+  Trial t(cfg, 1);
+  Rcpp::List l ;
+  if(dofu == 1){
+    Rcpp::Rcout << " doing with fu " << std::endl;
+    l = t.clin_set_state(n_target, ref_time);
+  } else {
+    Rcpp::Rcout << " doing without fu " << std::endl;
+    
+    t.set_curr_intrm_idx(cur_intrm);
+    l = t.clin_set_state();
+  }
+  
+  return l;
+}
+
+
    
-#if _INFO
-#define INFO( os, i, msg )                                \
-   (os) << "INFO: " << __FILE__ << "(" << __LINE__ << ") "\
-        << " sim = " << i << " " << msg << std::endl
-#else
-#define INFO( os, i, msg )
-#endif
-
-
  
 // [[Rcpp::export]]
 Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat) {
@@ -36,17 +47,12 @@ Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat) {
   Rcpp::Rcout << " STARTING TRIAL ID " << idxsim << std::endl;
   
   Trial t(cfg, idxsim);
-  
-  // Rcpp::Rcout << " get_thresh_pp_fut " << t.get_thresh_pp_fut() << std::endl;
-  // Rcpp::Rcout << " get_thresh_pp_es  " << t.get_thresh_pp_es() << std::endl;
-  // Rcpp::Rcout << " get_thresh_p_sup  " << t.get_thresh_p_sup() << std::endl;
-  t.print_cfg();
 
+  t.print_cfg();
   t.run_interims();
+  t.run_final();
+  t.print_state();
   
-  // Rcpp::List res_fin = run_fin(d, cfg, t, idxsim);
-  // Rcpp::Rcout << " back in simulate trial t.get_c_ppos_n() " 
-  //                 << t.get_c_ppos_n() << std::endl;
   
   Rcpp::List ret;
   ret["trial"] = 1;
