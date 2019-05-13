@@ -164,12 +164,21 @@ void Trial::run_final(){
 
 void Trial::clin_fin(){
   
-  INFO(Rcpp::Rcout, get_sim_id(), "final clin with n = " << n_enrolled);
-  
   double a = (double)cfg["prior_gamma_a"];
   double b = (double)cfg["prior_gamma_a"];
+  int n_target = 0;
   
-  c_suf_fin = clin_censoring(n_enrolled, 0);
+  // if no early stopping then look at max size
+  if(is_clin_fut() == 0 && is_clin_es() == 0 
+       && is_immu_fut() == 0){
+    n_target = (int)cfg["n_stop"];
+    INFO(Rcpp::Rcout, get_sim_id(), "final clin no early stop n = " << n_target);
+  } else {
+    n_target = get_enrolled_ss();
+    INFO(Rcpp::Rcout, get_sim_id(), "final clin early stop n = " << n_target);
+  }
+  
+  c_suf_fin = clin_censoring(n_target, 0);
   
   int tot_imp = 0;
   for(int i = 0; i < n_enrolled; i++){
@@ -195,14 +204,17 @@ void Trial::clin_fin(){
   c_p_fin =  (double)ugt1.n_elem / (double)cfg["post_draw"];
   
   if(c_p_fin > (double)cfg["thresh_p_sup"]){
-    set_clin_final(true);
-  } else{
-    set_clin_final(false);
+    set_clin_fin_decision(1);
+  } else if(c_p_fin < (double)cfg["thresh_p_fut"]){
+    set_clin_fin_decision(-1);
+  } else {
+    set_clin_fin_decision(0);
   }
   
   INFO(Rcpp::Rcout, get_sim_id(), "final clin c_p_fin " << c_p_fin
-          << " sup thresh " << (double)cfg["thresh_p_sup"]
-          << " won = " << get_clin_final());
+          << " vs sup thresh " << (double)cfg["thresh_p_sup"]
+          << " decision = " << get_clin_fin_decision() 
+          << " (-1 is fut, 0 is nd, 1 is won)");
   
 }
 
@@ -232,7 +244,9 @@ void Trial::run_interims(){
       
       INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
         << " clin c_ppos_n " << c_ppos_n 
-        << " clin c_ppos_max " << c_ppos_max);
+        << " vs pp es thresh " << (double)cfg["thresh_pp_es"]
+        << " clin c_ppos_max " << c_ppos_max
+        << " vs pp fut thresh " << (double)cfg["thresh_pp_fut"]);
       
       if(c_ppos_max < (double)cfg["thresh_pp_fut"]){
         INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
@@ -252,6 +266,13 @@ void Trial::run_interims(){
         break;
       }
     }
+  }
+  
+  if(is_v_samp_stopped() == 0 && is_immu_fut() == 0 &&
+     is_clin_fut() == 0 && is_clin_es() == 0){
+    
+    INFO(Rcpp::Rcout, get_sim_id(), "intrms are inconclusive - no stopping rules hit ");
+    set_inconclusive();
   }
 
 }
@@ -414,13 +435,7 @@ void Trial::clin_interim(){
   return;
 }
 
-// todo
-// figure out why imputation reqt is so high.
-// check for differing interims with and wo fu
-// check for max with fu
-// check for final with fu
-// consider refactoring sub level censoring 
-// but imputation for interm + fu, max + fu and final + fu
+
 
 
   
@@ -673,8 +688,8 @@ void Trial::set_nstartclin(int nstartc){nstartclin = nstartc;}
 void Trial::set_immu_ss(int n){immu_ss = n;}
 void Trial::set_clin_ss(int n){clin_ss = n;}
 void Trial::set_enrolled_ss(int n){n_enrolled = n;}
-void Trial::set_immu_final(bool won){i_final_win = won;}
-void Trial::set_clin_final(bool won){c_final_win = won;}
+void Trial::set_immu_fin_decision(int decision){i_final_decision = decision;}
+void Trial::set_clin_fin_decision(int decision){c_final_decision = decision;}
 
 void Trial::set_curr_intrm_idx(int cur_intrm){idx_cur_intrm = cur_intrm;}
 
@@ -699,8 +714,8 @@ int Trial::get_nstartclin(){return nstartclin;}
 int Trial::get_immu_ss(){return immu_ss;}
 int Trial::get_clin_ss(){return clin_ss;}
 int Trial::get_enrolled_ss(){return n_enrolled;}
-int Trial::get_immu_final(){return i_final_win;}
-int Trial::get_clin_final(){return c_final_win;}
+int Trial::get_immu_fin_decision(){return i_final_decision;}
+int Trial::get_clin_fin_decision(){return c_final_decision;}
 
 double Trial::get_i_ppos_n(){return i_ppos_n;}
 double Trial::get_i_ppos_max(){return i_ppos_max;} 
@@ -728,8 +743,8 @@ Rcpp::List Trial::as_list(){
   ret["immu_ss"] = get_immu_ss();
   ret["clin_ss"] = get_clin_ss();
   ret["n_enrolled"] = get_enrolled_ss();
-  ret["immu_final"] = get_immu_final();
-  ret["clin_final"] = get_clin_final();
+  ret["immu_final"] = get_immu_fin_decision();
+  ret["clin_final"] = get_clin_fin_decision();
   ret["v_samp_stopped"] = is_v_samp_stopped();
   ret["immu_fut"] = is_immu_fut();
   ret["clin_fut"] = is_clin_fut();
@@ -742,10 +757,13 @@ Rcpp::List Trial::as_list(){
 void Trial::print_state(){
   Rcpp::Rcout << "INFO: " << __FILE__ << "(" << __LINE__ << ") "
     << " sim = " << get_sim_id() 
-    << " intrm immu stop v samp " << is_v_samp_stopped()
-    << " futile " << is_immu_fut()
+    << " SUMMARY - Interims: immu stop_v_samp " << is_v_samp_stopped()
+    << " immu_fut " << is_immu_fut()
+    << " clin_es " << is_clin_es()
+    << " clin_fut " << is_clin_fut()
     << " inconclusive " << is_inconclusive()
-    << " final analy win " << get_clin_final()
+    << " Final analysis: immu_decision " << get_immu_fin_decision()
+    << " clin_decision " << get_clin_fin_decision()
     << std::endl;
 }
 

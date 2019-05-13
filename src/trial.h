@@ -46,8 +46,8 @@ private:
   int nmaxsero = 250;
   int nstartclin = 200;
   
-  bool i_final_win = 0;
-  bool c_final_win = 0;
+  int i_final_decision = 0;
+  int c_final_decision = 0;
 
 protected:
   
@@ -105,8 +105,8 @@ public:
   void set_immu_ss(int n);
   void set_clin_ss(int n);
   void set_enrolled_ss(int n);
-  void set_immu_final(bool won);
-  void set_clin_final(bool won); 
+  void set_immu_fin_decision(int decision);
+  void set_clin_fin_decision(int decision); 
   
   void set_curr_intrm_idx(int cur_intrm);
 
@@ -129,8 +129,8 @@ public:
   int get_immu_ss();
   int get_clin_ss();
   int get_enrolled_ss();
-  int get_immu_final();
-  int get_clin_final();
+  int get_immu_fin_decision();
+  int get_clin_fin_decision();
 
   double get_i_ppos_n();
   double get_i_ppos_max(); 
