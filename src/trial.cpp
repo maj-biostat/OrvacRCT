@@ -14,7 +14,10 @@ Trial::Trial(Rcpp::List& trial_cfg, int idxsim){
   d = init_trial_dat();
   intrms = init_interims();
   
-  print_interims();
+  if((int)cfg["print_intrm"] == 1){
+    print_interims();
+  }
+
 }
 
 
@@ -1129,7 +1132,7 @@ void Trial::print_cfg(){
   int n = cfg.size();
   for(int i = 0; i < n; i++){
     Rcpp::CharacterVector le = cfg[i];
-    INFO(Rcpp::Rcout, get_sim_id(), le );
+    INFO(Rcpp::Rcout, get_sim_id(), " cfg item " << i <<  " =  " << le );
   }
 
   INFO(Rcpp::Rcout, get_sim_id(), "End of configuration." << std::endl );
@@ -1141,8 +1144,9 @@ void Trial::print_interims(){
   
   INFO(Rcpp::Rcout, get_sim_id(), "Interims for this trial: " );
   
-  Rcpp::Rcout <<  intrms << std::endl;
-
+  for(int i = 0; i < intrms.n_rows; i++){
+    INFO(Rcpp::Rcout, get_sim_id(), " intrm " << i << " =  " << intrms.row(i));
+  }
   
 }
 

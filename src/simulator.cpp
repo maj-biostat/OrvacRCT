@@ -71,7 +71,9 @@ Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat) {
   
   Trial t(cfg, idxsim);
 
-  t.print_cfg();
+  if((int)cfg["print_cfg"] == 1){
+    t.print_cfg();
+  }
   t.run_interims();
   t.run_final();
   t.print_state();
