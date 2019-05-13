@@ -12,13 +12,14 @@
 #define COL_SEROT2        4
 #define COL_SEROT3        5
 #define COL_PROBT3        6
-#define COL_EVTT          7
-#define COL_CEN           8
-#define COL_OBST          9
-#define COL_REASON        10
-#define COL_IMPUTE        11
-#define COL_REFTIME       12
-#define NCOL              13
+#define COL_SEROIMPUTE    7
+#define COL_EVTT          8
+#define COL_CEN           9
+#define COL_OBST          10
+#define COL_REASON        11
+#define COL_IMPUTE        12
+#define COL_REFTIME       13
+#define NCOL              14
 
 #define COL_THETA0        0
 #define COL_THETA1        1
@@ -106,6 +107,8 @@ public:
   
   void immu_interim();
   Rcpp::List immu_observed();
+  Rcpp::List immu_observed(int n_target);
+  void immu_fin();
   
   void run_interims();
   void run_final();

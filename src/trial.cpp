@@ -56,6 +56,7 @@ arma::mat Trial::init_trial_dat(){
     
   }
   
+  d.col(COL_SEROIMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
@@ -156,21 +157,19 @@ void Trial::run_final(){
   // we are now doing the final analysis
   is_final = 1;
   
+  immu_fin();
   clin_fin();
-  
-  
   
 }
 
 void Trial::clin_fin(){
   
   double a = (double)cfg["prior_gamma_a"];
-  double b = (double)cfg["prior_gamma_a"];
+  double b = (double)cfg["prior_gamma_b"];
   int n_target = 0;
   
   // if no early stopping then look at max size
-  if(is_clin_fut() == 0 && is_clin_es() == 0 
-       && is_immu_fut() == 0){
+  if(is_clin_fut() == 0 && is_clin_es() == 0 && is_immu_fut() == 0){
     n_target = (int)cfg["n_stop"];
     INFO(Rcpp::Rcout, get_sim_id(), "final clin no early stop n = " << n_target);
   } else {
@@ -186,7 +185,7 @@ void Trial::clin_fin(){
     
   }
   
-  INFO(Rcpp::Rcout, get_sim_id(), "final clin tot_imp " << tot_imp);
+  INFO(Rcpp::Rcout, get_sim_id(), "final clin imputing " << tot_imp << " (should be 0)");
   
   arma::mat m = arma::zeros((int)cfg["post_draw"] , 3);  
   
@@ -196,11 +195,11 @@ void Trial::clin_fin(){
       1/(b + (double)c_suf_fin["tot_obst_0"]));
     m(i, COL_LAMB1) = R::rgamma(a + (double)c_suf_fin["n_evnt_1"], 
       1/(b + (double)c_suf_fin["tot_obst_1"]));
-    m(i, COL_RATIO) = m(i, COL_LAMB0) / m(i, COL_LAMB1);
+    m(i, COL_RATIO) = m(i, COL_LAMB1) / m(i, COL_LAMB0);
     
   }
 
-  arma::uvec ugt1 = arma::find(m.col(COL_RATIO) > 1);
+  arma::uvec ugt1 = arma::find(m.col(COL_RATIO) < 1);
   c_p_fin =  (double)ugt1.n_elem / (double)cfg["post_draw"];
   
   if(c_p_fin > (double)cfg["thresh_p_sup"]){
@@ -219,6 +218,79 @@ void Trial::clin_fin(){
 }
 
 
+
+
+
+
+
+
+void Trial::immu_fin(){
+  
+  double a = (double)cfg["prior_beta_a"];
+  double b = (double)cfg["prior_beta_b"];
+  int n_target = 0;
+  
+  // if no early stopping then look at max size
+  if(is_immu_fut() == 0 && is_v_samp_stopped() == 0){
+    n_target = (int)cfg["n_max_sero"];
+    INFO(Rcpp::Rcout, get_sim_id(), "final immu no early stop n = " << n_target);
+  } else {
+    n_target = get_immu_ss();
+    INFO(Rcpp::Rcout, get_sim_id(), "final immu early stop n = " << n_target);
+  }
+  
+  i_suf_fin = immu_observed(n_target);
+  
+  int tot_imp = 0;
+  for(int i = 0; i < n_target; i++){
+    tot_imp = tot_imp + d(i, COL_SEROIMPUTE);
+    
+  }
+  
+  INFO(Rcpp::Rcout, get_sim_id(), "final immu imputing " << tot_imp << " (should be 0)");
+  
+  arma::mat m = arma::zeros((int)cfg["post_draw"] , 3);  
+  
+  for(int i = 0; i < (int)cfg["post_draw"]; i++){
+    
+    m(i, COL_THETA0) = R::rbeta(a + (double)i_suf_fin["n_evnt_0"], 
+      b + (double)i_suf_fin["n_tot_0"] - (double)i_suf_fin["n_evnt_0"]);
+    m(i, COL_THETA1) = R::rbeta(a + (double)i_suf_fin["n_evnt_1"], 
+      b + (double)i_suf_fin["n_tot_1"] - (double)i_suf_fin["n_evnt_1"]);
+    m(i, COL_DELTA) = m(i, COL_THETA1) - m(i, COL_THETA0);
+    
+  }
+  
+  arma::uvec ugt0 = arma::find(m.col(COL_DELTA) > 0);
+  i_p_fin =  (double)ugt0.n_elem / (double)cfg["post_draw"];
+  
+  if(i_p_fin > (double)cfg["thresh_p_sup"]){
+    set_immu_fin_decision(1);
+  } else if(i_p_fin < (double)cfg["thresh_p_fut"]){
+    set_immu_fin_decision(-1);
+  } else {
+    set_immu_fin_decision(0);
+  }
+  
+  INFO(Rcpp::Rcout, get_sim_id(), "final immu i_p_fin " << i_p_fin
+    << " vs. sup thresh " << (double)cfg["thresh_p_sup"]
+    << " decision = " << get_immu_fin_decision() 
+    << " (-1 is fut, 0 is nd, 1 is won)");
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 void Trial::run_interims(){
 
   int i = 0;
@@ -235,7 +307,12 @@ void Trial::run_interims(){
     INFO(Rcpp::Rcout, get_sim_id(), "STARTING: intrm " << idx_cur_intrm
       << " n_enrolled " << n_enrolled
       << " do immu " << do_immu()
-      << " do clin " << do_clin());
+      << " do clin " << do_clin()
+      << " thresh_pp_fut " << get_thresh_pp_fut()
+      << " thresh_pp_es " << get_thresh_pp_es()
+      << " thresh_p_sup " << get_thresh_p_sup() 
+      << " post_draw " << (int)cfg["post_draw"]);
+    
     
     if(do_immu()){
       
@@ -246,17 +323,17 @@ void Trial::run_interims(){
       immu_interim();
       
       INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-        << " immu i_p_n " << i_p_n 
-        << " immu i_ppos_n " << i_ppos_n 
-        << " vs pp es thresh " << (double)cfg["thresh_pp_es"]
-        << " immu i_ppos_max " << i_ppos_max
-        << " vs pp fut thresh " << (double)cfg["thresh_pp_fut"]);
+        << " immu i_p_n = " << i_p_n 
+        << ", i_ppos_n = " << i_ppos_n 
+        << " vs. pp_es_thresh = " << (double)cfg["thresh_pp_es"]
+        << ", i_ppos_max = " << i_ppos_max
+        << " vs. pp_fut_thresh = " << (double)cfg["thresh_pp_fut"]);
       
       if(i_ppos_max < (double)cfg["thresh_pp_fut"]){
         INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-          << " immu futile - stop now, ppmax " 
+          << " immu hit futile - stop now, ppmax " 
           << i_ppos_max
-          << " fut thresh " << (double)cfg["thresh_pp_fut"]);
+          << " fut_thresh " << (double)cfg["thresh_pp_fut"]);
         set_immu_fut();
         break;
       }
@@ -267,7 +344,7 @@ void Trial::run_interims(){
           << i_ppos_n
           << " es thresh " << (double)cfg["thresh_pp_es"]);
         set_immu_stopv();
-        break;
+        // do not break yet
       }
     }
     
@@ -275,28 +352,28 @@ void Trial::run_interims(){
       
       // set idx_cur_intrm prior to use
       clin_interim();
-      
-      
+  
       INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-        << " clin c_ppos_n " << c_ppos_n 
-        << " vs pp es thresh " << (double)cfg["thresh_pp_es"]
-        << " clin c_ppos_max " << c_ppos_max
-        << " vs pp fut thresh " << (double)cfg["thresh_pp_fut"]);
+        << " clin c_p_n " << c_p_n 
+        << "  c_ppos_n = " << c_ppos_n 
+        << " vs. pp_es_thresh = " << (double)cfg["thresh_pp_es"]
+        << ", c_ppos_max = " << c_ppos_max
+        << " vs. pp_fut_thresh = " << (double)cfg["thresh_pp_fut"]);
       
       if(c_ppos_max < (double)cfg["thresh_pp_fut"]){
         INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-          << " clin futile - stop now, ppmax " 
+          << " clin hit futile - stop now, ppmax " 
           << c_ppos_max
-          << " fut thresh " << (double)cfg["thresh_pp_fut"]);
+          << " fut_thresh " << (double)cfg["thresh_pp_fut"]);
         set_clin_fut();
         break;
       }
       
       if (c_ppos_n > (double)cfg["thresh_pp_es"] && !is_clin_fut()){
         INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-          << " clin es - stop now, ppn " 
+          << " clin hit es - stop now, ppn " 
           << c_ppos_n
-          << " es thresh " << (double)cfg["thresh_pp_es"]);
+          << " es_thresh " << (double)cfg["thresh_pp_es"]);
         set_clin_es();
         break;
       }
@@ -314,15 +391,7 @@ void Trial::run_interims(){
 
 void Trial::immu_interim(){
   
-  INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-    << " immu using up to n = "
-    << (int)intrms(idx_cur_intrm, INT_N) 
-    << ", enrld " << get_enrolled_ss()
-    << ", thresh_pp_fut " << get_thresh_pp_fut()
-    << ", thresh_pp_es " << get_thresh_pp_es()
-    << ", thresh_p_sup " << get_thresh_p_sup() 
-    << " post_draw " << (int)cfg["post_draw"]);
-  
+
   // stores samples from posterior, 
   arma::mat m = arma::zeros((int)cfg["post_draw"] , 3);
   arma::mat m_pp_int = arma::zeros((int)cfg["post_draw"] , 3);
@@ -336,47 +405,132 @@ void Trial::immu_interim(){
   double b = (double)cfg["prior_beta_b"];
 
   i_suf_intrm = immu_observed();
+  
+  // subjs that require imputation
+  arma::uvec uimpute = arma::find(d.col(COL_SEROIMPUTE) == 1);
+  
+  INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
+    << " immu using up to n = " << (int)intrms(idx_cur_intrm, INT_N) 
+    << " n_evnt_0 " << (int)i_suf_intrm["n_evnt_0"]
+    << " n_evnt_1 " << (int)i_suf_intrm["n_evnt_1"]
+    << " n_tot_0 " << (int)i_suf_intrm["n_tot_0"]
+    << " n_tot_0 " << (int)i_suf_intrm["n_tot_1"]
+    << " unobserved " << (int)uimpute.n_elem
+  );
 
-  Rcpp::Rcout << " interim ss " << (int)intrms(idx_cur_intrm, INT_N)
-              << " n_evnt_0 " << (int)i_suf_intrm["n_evnt_0"]
-              << " n_evnt_1 " << (int)i_suf_intrm["n_evnt_1"]
-              << " n_tot_0 " << (int)i_suf_intrm["n_tot_0"]
-              << " n_tot_0 " << (int)i_suf_intrm["n_tot_1"]
-              << std::endl;
+  // keep a copy of the original state
+  arma::mat d_orig = arma::zeros((int)cfg["n_stop"], 1);
+  d_orig.col(0) = arma::vec(d.col(COL_SEROT3));
 
   for(int i = 0; i < (int)cfg["post_draw"]; i++){
     
     // draw from the posterior at current time.
     m(i, COL_THETA0) = R::rbeta(a + (double)i_suf_intrm["n_evnt_0"], 
-      b + (double)i_suf_intrm["n_tot_0"] - (double)i_suf_intrm["n_evnt_1"]);
+      b + (double)i_suf_intrm["n_tot_0"] - (double)i_suf_intrm["n_evnt_0"]);
     m(i, COL_THETA1) = R::rbeta(a + (double)i_suf_intrm["n_evnt_1"], 
       b + (double)i_suf_intrm["n_tot_1"] - (double)i_suf_intrm["n_evnt_1"]);
     m(i, COL_DELTA) = m(i, COL_THETA1) - m(i, COL_THETA0);
     
-    
-    
+    // Rcpp::Rcout << " post1 m(i, COL_THETA0) " << m(i, COL_THETA0) 
+    //             << " m(i, COL_THETA1) " << m(i, COL_THETA1) << std::endl;
     
     // impute the ones that we do not yet have events for up to the 
     // current time
+    for(int j = 0; j < (int)uimpute.n_elem; j++){
+      int sub_idx = uimpute(j);
+      if(d(sub_idx, COL_TRT) == 0){
+        d(sub_idx, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA0));
+      } else {
+        d(sub_idx, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA1));
+      }
+    }
     
     // compute pred prob at the time of interim
-    // if there are none to impute then this is just the posterior 
-    // prob of a difference 
+    i_suf_intrm_fu = immu_observed((int)intrms(idx_cur_intrm, INT_N));
+    
+    // Rcpp::Rcout << " with impute to n n_evnt_0 " << (int)i_suf_intrm["n_evnt_0"]
+    //             << " n_evnt_1 " << (int)i_suf_intrm["n_evnt_1"]
+    //             << " n_tot_0 " << (int)i_suf_intrm["n_tot_0"]
+    //             << " n_tot_0 " << (int)i_suf_intrm["n_tot_1"]
+    //             << std::endl;
+    
+    for(int j = 0; j < (int)cfg["post_draw"]; j++){
+      m_pp_int(j, COL_THETA0) = R::rbeta(a + (double)i_suf_intrm_fu["n_evnt_0"], 
+        b + (double)i_suf_intrm_fu["n_tot_0"] - (double)i_suf_intrm_fu["n_evnt_0"]);
+      m_pp_int(j, COL_THETA1) = R::rbeta(a + (double)i_suf_intrm_fu["n_evnt_1"], 
+        b + (double)i_suf_intrm_fu["n_tot_1"] - (double)i_suf_intrm_fu["n_evnt_1"]);
+      m_pp_int(j, COL_DELTA) = m_pp_int(j, COL_THETA1) - m_pp_int(j, COL_THETA0);
+    }
+    
+    // Rcpp::Rcout << " post2 m_pp_int(999, COL_THETA0) " << m_pp_int(999, COL_THETA0) 
+    //             << " m_pp_int(999, COL_THETA1) " << m_pp_int(999, COL_THETA1) << std::endl;
+
+    // empirical posterior probability that ratio_lamb > 1
+    ugt0 = arma::find(m_pp_int.col(COL_DELTA) > 0);
+    if((double)ugt0.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
+      int_win++;
+    }
     
     // impute the ones that we do not yet have events for up to the 
     // max samp size of 250
+    for(int k = (int)intrms(idx_cur_intrm, INT_I_START); k < (int)cfg["n_max_sero"]; k++){
+      if(d(k, COL_TRT) == 0){
+        d(k, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA0));
+      } else {
+        d(k, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA1));
+      }
+    }
     
     // compute pred prob assuming we go up to nmax
+    // what does the posterior at max sample size say?
+    i_suf_max_fu = immu_observed((int)cfg["n_max_sero"]);
+    
+    
+    // Rcpp::Rcout << " at max n_evnt_0 " << (int)i_suf_max_fu["n_evnt_0"]
+    //             << " n_evnt_1 " << (int)i_suf_max_fu["n_evnt_1"]
+    //             << " n_tot_0 " << (int)i_suf_max_fu["n_tot_0"]
+    //             << " n_tot_0 " << (int)i_suf_max_fu["n_tot_1"]
+    //             << std::endl;
+    
+    
+    for(int j = 0; j < (int)cfg["post_draw"]; j++){
+      m_pp_max(j, COL_THETA0) = R::rbeta(a + (double)i_suf_max_fu["n_evnt_0"], 
+               b + (double)i_suf_max_fu["n_tot_0"] - (double)i_suf_max_fu["n_evnt_0"]);
+      m_pp_max(j, COL_THETA1) = R::rbeta(a + (double)i_suf_max_fu["n_evnt_1"], 
+               b + (double)i_suf_max_fu["n_tot_1"] - (double)i_suf_max_fu["n_evnt_1"]);
+      m_pp_max(j, COL_DELTA) = m_pp_max(j, COL_THETA1) - m_pp_max(j, COL_THETA0);
+    }
+    
+    // Rcpp::Rcout << " post3 m_pp_max(999, COL_THETA0) " << m_pp_max(999, COL_THETA0) 
+    //             << " m_pp_max(999, COL_THETA1) " << m_pp_max(999, COL_THETA1) << std::endl;    
+
+    
+    // empirical posterior probability that ratio_lamb > 1
+    ugt0 = arma::find(m_pp_max.col(COL_DELTA) > 0);
+    if((double)ugt0.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
+      max_win++;
+    }
+    
+    // reset to original state ready for the next posterior draw
+    d.col(COL_SEROT3) = arma::vec(d_orig.col(0));
     
   }
   
- 
+  // reset so have clean state for next interim
+  d.col(COL_SEROIMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  
+  // Rcpp::Rcout << " int_win      " << max_win << std::endl;
+  // Rcpp::Rcout << " max_win      " << max_win << std::endl;
+
   ugt0 = arma::find(m.col(COL_DELTA) > 0);
   this->i_p_n = (double)ugt0.n_elem/(double)cfg["post_draw"];
-  // this->i_ppos_n = (double)int_win/(double)cfg["post_draw"];
-  // this->i_ppos_max = (double)max_win/(double)cfg["post_draw"];
+  this->i_ppos_n = (double)int_win/(double)cfg["post_draw"];
+  this->i_ppos_max = (double)max_win/(double)cfg["post_draw"];
 
- 
+  INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
+    << " immu int_win " << int_win << " max_win " << max_win 
+    << " out of " << (double)cfg["post_draw"]);
+  
   return;
 }
 
@@ -399,13 +553,12 @@ Rcpp::List Trial::immu_observed(){
     
     if(d(sub_idx, COL_ACCRT) + (double)cfg["sero_info_delay"] > ref_time){
       
-      // Rcpp::Rcout << " interim ss " << (int)intrms(idx_cur_intrm, INT_N)
-      //             << " sub_idx " << sub_idx
-      //             << " seroconversion results not yet provided." 
-      //             << std::endl;
-      
+      d(sub_idx, COL_SEROIMPUTE) = 1;
+
       continue;
     }
+    
+    d(sub_idx, COL_SEROIMPUTE) = 0;
     
     if(d(sub_idx, COL_TRT) == 0){
       n_tot_0++;
@@ -431,23 +584,44 @@ Rcpp::List Trial::immu_observed(){
 }
   
   
+Rcpp::List Trial::immu_observed(int n_target){
   
+  int n_evnt_0 = 0;
+  int n_evnt_1 = 0;
+  int n_tot_0 = 0;
+  int n_tot_1 = 0;
+  
+  for(int sub_idx = 0; sub_idx < n_target; sub_idx++){
+    
+    d(sub_idx, COL_SEROIMPUTE) = 0;
+    
+    if(d(sub_idx, COL_TRT) == 0){
+      n_tot_0++;
+      if(d(sub_idx, COL_SEROT3) == 1){
+        n_evnt_0++;
+      }
+      
+    } else {
+      n_tot_1++;
+      if(d(sub_idx, COL_SEROT3) == 1){
+        n_evnt_1++;
+      }
+    }
+    
+  }
+  
+  Rcpp::List ret = Rcpp::List::create(Rcpp::Named("n_evnt_0") = n_evnt_0,
+                                      Rcpp::Named("n_tot_0") = n_tot_0,
+                                      Rcpp::Named("n_evnt_1") = n_evnt_1,
+                                      Rcpp::Named("n_tot_1") = n_tot_1);
+  
+  return ret;
+}  
   
   
   
 void Trial::clin_interim(){
-  
 
-  INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-          << " clin using up to n = "
-        << (int)intrms(idx_cur_intrm, INT_N) 
-        << ", enrld " << get_enrolled_ss()
-        << ", thresh_pp_fut " << get_thresh_pp_fut()
-        << ", thresh_pp_es " << get_thresh_pp_es()
-        << ", thresh_p_sup " << get_thresh_p_sup() 
-        << " post_draw " << (int)cfg["post_draw"]);
-  
-      
   // stores samples from posterior, 
   arma::mat m = arma::zeros((int)cfg["post_draw"] , 3);
   arma::mat m_pp_int = arma::zeros((int)cfg["post_draw"] , 3);
@@ -458,17 +632,21 @@ void Trial::clin_interim(){
   int max_win = 0;
   
   double a = (double)cfg["prior_gamma_a"];
-  double b = (double)cfg["prior_gamma_a"];
+  double b = (double)cfg["prior_gamma_b"];
   
   c_suf_intrm = clin_censoring();
+  // subjs that require imputation
+  arma::uvec uimpute = arma::find(d.col(COL_IMPUTE) == 1);
   
-  // Rcpp::Rcout << " interim ss " << (int)intrms(idx_cur_intrm, INT_N)
-  //             << " fu " << 0
-  //             << " n_evnt_0 " << (int)c_suf_intrm["n_evnt_0"]
-  //             << " n_evnt_1 " << (int)c_suf_intrm["n_evnt_1"]
-  //             << " tot_obst_0 " << (double)c_suf_intrm["tot_obst_0"]
-  //             << " tot_obst_1 " << (double)c_suf_intrm["tot_obst_1"]
-  //             << std::endl;
+  INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
+    << " clin using up to n = " << (int)intrms(idx_cur_intrm, INT_N) 
+    << " n_evnt_0 " << (int)c_suf_intrm["n_evnt_0"]
+    << " n_evnt_1 " << (int)c_suf_intrm["n_evnt_1"]
+    << " tot_obst_0 " << (double)c_suf_intrm["tot_obst_0"]
+    << " tot_obst_1 " << (double)c_suf_intrm["tot_obst_1"]
+    << " unobserved " << (int)uimpute.n_elem
+  );
+  
   
   // keep a copy of the original state
   arma::mat d_orig = arma::zeros((int)cfg["n_stop"], 6);
@@ -479,15 +657,7 @@ void Trial::clin_interim(){
   d_orig.col(4) = arma::vec(d.col(COL_IMPUTE));
   d_orig.col(5) = arma::vec(d.col(COL_REFTIME));
   
-  // subjs that require imputation
-  arma::uvec uimpute = arma::find(d.col(COL_IMPUTE) == 1);
-
   
-  INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
-          << " clin imputing "
-          << (int)uimpute.n_elem << " that are currently unobserved.");
-  
- 
   // for i in postdraws do posterior predictive trials
   // 1. for the interim (if we are at less than 50 per qtr)
   // 2. for the max sample size
@@ -499,11 +669,10 @@ void Trial::clin_interim(){
       1/(b + (double)c_suf_intrm["tot_obst_0"]));
     m(i, COL_LAMB1) = R::rgamma(a + (double)c_suf_intrm["n_evnt_1"], 
       1/(b + (double)c_suf_intrm["tot_obst_1"]));
-    m(i, COL_RATIO) = m(i, COL_LAMB0) / m(i, COL_LAMB1);
+    m(i, COL_RATIO) = m(i, COL_LAMB1) / m(i, COL_LAMB0);
     
-    // Rcpp::Rcout << " m(i, COL_RATIO)      " << m(i, COL_RATIO) << std::endl;
-    //Rcpp::Rcout << " (int)uimpute.n_elem  " << (int)uimpute.n_elem << std::endl;
-    
+    //Rcpp::Rcout << " m(i, COL_RATIO)      " << m(i, COL_RATIO) << std::endl;
+
     // use memoryless prop of exponential and impute enrolled kids that have not
     // yet had event.
     for(int j = 0; j < (int)uimpute.n_elem; j++){
@@ -524,22 +693,15 @@ void Trial::clin_interim(){
     c_suf_intrm_fu = clin_censoring((int)intrms(idx_cur_intrm, INT_N), 
       (double)intrms(idx_cur_intrm, INT_T_END));
     
-    // Rcpp::Rcout << "c_suf_intrm_fu " 
-    //             << " n_evnt_0 " << (int)c_suf_intrm_fu["n_evnt_0"]
-    //             << " n_evnt_1 " << (int)c_suf_intrm_fu["n_evnt_1"]
-    //             << " tot_obst_0 " << (double)c_suf_intrm_fu["tot_obst_0"]
-    //             << " tot_obst_1 " << (double)c_suf_intrm_fu["tot_obst_1"]
-    //             << std::endl;
-
     for(int j = 0; j < (int)cfg["post_draw"]; j++){
       m_pp_int(j, COL_LAMB0) = R::rgamma(a + (double)c_suf_intrm_fu["n_evnt_0"], 
         1/(b + (double)c_suf_intrm_fu["tot_obst_0"]));
       m_pp_int(j, COL_LAMB1) = R::rgamma(a + (double)c_suf_intrm_fu["n_evnt_1"], 
         1/(b + (double)c_suf_intrm_fu["tot_obst_1"]));
-      m_pp_int(j, COL_RATIO) = m_pp_int(j, COL_LAMB0) / m_pp_int(j, COL_LAMB1);
+      m_pp_int(j, COL_RATIO) = m_pp_int(j, COL_LAMB1) / m_pp_int(j, COL_LAMB0);
     }
-    // empirical posterior probability that ratio_lamb > 1
-    ugt1 = arma::find(m_pp_int.col(COL_RATIO) > 1);
+    // empirical posterior probability that ratio_lamb < 1
+    ugt1 = arma::find(m_pp_int.col(COL_RATIO) < 1);
     if((double)ugt1.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
       int_win++;
     }
@@ -564,10 +726,10 @@ void Trial::clin_interim(){
         1/(b + (double)c_suf_max_fu["tot_obst_0"]));
       m_pp_max(j, COL_LAMB1) = R::rgamma(a + (double)c_suf_max_fu["n_evnt_1"], 
         1/(b + (double)c_suf_max_fu["tot_obst_1"]));
-      m_pp_max(j, COL_RATIO) = m_pp_max(j, COL_LAMB0) / m_pp_max(j, COL_LAMB1);
+      m_pp_max(j, COL_RATIO) = m_pp_max(j, COL_LAMB1) / m_pp_max(j, COL_LAMB0);
     }
-    // empirical posterior probability that ratio_lamb > 1
-    ugt1 = arma::find(m_pp_max.col(COL_RATIO) > 1);
+    // empirical posterior probability that ratio_lamb < 1
+    ugt1 = arma::find(m_pp_max.col(COL_RATIO) < 1);
     if((double)ugt1.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
       max_win++;
     }
@@ -583,11 +745,20 @@ void Trial::clin_interim(){
     
   }
   
+  
+  // reset so have clean state for next interim
+  d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_IMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_REFTIME) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  
+  
   INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
     << " clin int_win " << int_win << " max_win " << max_win 
     << " out of " << (double)cfg["post_draw"]);
 
-  ugt1 = arma::find(m.col(COL_RATIO) > 1);
+  ugt1 = arma::find(m.col(COL_RATIO) < 1);
   
   this->c_p_n = (double)ugt1.n_elem/(double)cfg["post_draw"];
   this->c_ppos_n = (double)int_win/(double)cfg["post_draw"];
@@ -916,16 +1087,29 @@ Rcpp::List Trial::as_list(){
 }
 
 void Trial::print_state(){
-  Rcpp::Rcout << "INFO: " << __FILE__ << "(" << __LINE__ << ") "
-    << " sim = " << get_sim_id() 
-    << " SUMMARY - Interims: immu stop_v_samp " << is_v_samp_stopped()
+  
+  INFO(Rcpp::Rcout, get_sim_id(), 
+    " SUMMARY - Interims: immu stop_v_samp " << is_v_samp_stopped()
     << " immu_fut " << is_immu_fut()
     << " clin_es " << is_clin_es()
     << " clin_fut " << is_clin_fut()
-    << " inconclusive " << is_inconclusive()
-    << " Final analysis: immu_decision " << get_immu_fin_decision()
-    << " clin_decision " << get_clin_fin_decision()
-    << std::endl;
+    << " inconclusive " << is_inconclusive() );
+    
+  INFO(Rcpp::Rcout, get_sim_id(), 
+    " SUMMARY - Interims: immu ppos at intrm = " << get_i_ppos_n()
+    << " immu ppos at max = " << get_i_ppos_max()
+    << " clin ppos at intrm = " << get_c_ppos_n()
+    << " clin ppos at max = " << get_c_ppos_max()
+  );
+    
+  INFO(Rcpp::Rcout, get_sim_id(), 
+    " SUMMARY - Final analysis: immu_decision " 
+    << get_immu_fin_decision()
+    << " post prob that delta in seroconv > 0 = " << i_p_fin
+    << " clin_decision " 
+    << get_clin_fin_decision() 
+    << " post prob of hazard ratio < 1 = " << c_p_fin);
+  
 }
 
 void Trial::print_cfg(){
