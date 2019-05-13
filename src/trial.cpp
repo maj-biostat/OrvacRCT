@@ -12,7 +12,7 @@ Trial::Trial(Rcpp::List& trial_cfg, int idxsim){
   sim_id = idxsim;
   cfg = trial_cfg;
   d = init_trial_dat();
-  intrms = get_interims();
+  intrms = init_interims();
   
   print_interims();
 }
@@ -65,8 +65,9 @@ arma::mat Trial::init_trial_dat(){
   return d;
 }
 
-arma::mat Trial::get_interims(){
+arma::mat Trial::init_interims(){
   
+  // get_interims
   // interims occur at index INT_I_END at time INT_T_END
   // an interim uses kids from 0 to INT_I_END with 
   // kids at index INT_I_START to INT_I_END being introduced
@@ -144,6 +145,12 @@ arma::mat Trial::get_interims(){
   
 }
 
+arma::mat Trial::get_interims(){
+  
+  arma::mat intrm_copy = arma::mat(intrms);
+  return intrm_copy;
+}
+
 void Trial::run_final(){
   
   // we are now doing the final analysis
@@ -162,7 +169,7 @@ void Trial::clin_fin(){
   double a = (double)cfg["prior_gamma_a"];
   double b = (double)cfg["prior_gamma_a"];
   
-  c_suf_fin = clin_set_state(n_enrolled, 0);
+  c_suf_fin = clin_censoring(n_enrolled, 0);
   
   int tot_imp = 0;
   for(int i = 0; i < n_enrolled; i++){
@@ -274,7 +281,7 @@ void Trial::clin_interim(){
   double a = (double)cfg["prior_gamma_a"];
   double b = (double)cfg["prior_gamma_a"];
   
-  c_suf_intrm = clin_set_state();
+  c_suf_intrm = clin_censoring();
   
   // Rcpp::Rcout << " interim ss " << (int)intrms(idx_cur_intrm, INT_N)
   //             << " fu " << 0
@@ -335,7 +342,7 @@ void Trial::clin_interim(){
   
     // update view of the sufficent stats using enrolled
     // kids that have all now been given an event time
-    c_suf_intrm_fu = clin_set_state((int)intrms(idx_cur_intrm, INT_N), 
+    c_suf_intrm_fu = clin_censoring((int)intrms(idx_cur_intrm, INT_N), 
       (double)intrms(idx_cur_intrm, INT_T_END));
     
     // Rcpp::Rcout << "c_suf_intrm_fu " 
@@ -369,8 +376,8 @@ void Trial::clin_interim(){
 
     // set the state up to the max sample size at time of the final analysis
     // what we put in for ref_time is irrelevant as it will be updated
-    // inside clin_set_state
-    c_suf_max_fu = clin_set_state((int)d.n_rows, 0);
+    // inside clin_censoring
+    c_suf_max_fu = clin_censoring((int)d.n_rows, 0);
 
     // what does the posterior at max sample size say?
     for(int j = 0; j < (int)cfg["post_draw"]; j++){
@@ -413,13 +420,13 @@ void Trial::clin_interim(){
 // check for max with fu
 // check for final with fu
 // consider refactoring sub level censoring 
-// need to have no imputation for interim
 // but imputation for interm + fu, max + fu and final + fu
 
 
+  
 // set censoring status up to participant.
 // to be used purely for reference time being the current interim
-Rcpp::List Trial::clin_set_state(){
+Rcpp::List Trial::clin_censoring(){
 
   int n_evnt_0 = 0;
   int n_evnt_1 = 0;
@@ -434,7 +441,7 @@ Rcpp::List Trial::clin_set_state(){
   // posterior at the current interim (no predictive probs.)
   for(int sub_idx = 0; sub_idx < n_target; sub_idx++){
     
-    DBG(Rcpp::Rcout, "STARTING set state for sub_idx " << sub_idx);
+    DBG(Rcpp::Rcout, "STARTING censoring state for sub_idx " << sub_idx);
     
     d(sub_idx, COL_REFTIME) = ref_time;
     
@@ -444,90 +451,29 @@ Rcpp::List Trial::clin_set_state(){
     DBG(Rcpp::Rcout, " ref - acc    "  << d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT));
     DBG(Rcpp::Rcout, " agemax - age "  << (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE));
     
-    if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME)){
-      
-      DBG(Rcpp::Rcout, " evtt before reftime " );
-      
-      if(d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) <= (double)cfg["max_age_fu"]){
-        // observed event
-        DBG(Rcpp::Rcout, " evtt occurred before too old" );
-        
-        d(sub_idx, COL_CEN) = 0;
-        d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
-        d(sub_idx, COL_REASON) = 1;
-        d(sub_idx, COL_IMPUTE) = 0;
-  
-        if(d(sub_idx, COL_TRT) == 0) {
-          n_evnt_0 += 1;
-        } else {
-          n_evnt_1 += 1;
-        }
-        
-      } else {
-        
-        DBG(Rcpp::Rcout, " evtt after too old" );
-        
-        if(d(sub_idx, COL_REFTIME) <
-                  d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
-        
-          // censor at mnth - accrual
-          DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
-          
-          d(sub_idx, COL_CEN) = 1;
-          d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
-          d(sub_idx, COL_REASON) = 3;
-          d(sub_idx, COL_IMPUTE) = 1;
-        
-        } else {
-          
-          DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
-          
-          d(sub_idx, COL_CEN) = 1;
-          d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
-          d(sub_idx, COL_REASON) = 4;
-          d(sub_idx, COL_IMPUTE) = 0;
-        }
-
-      }
-
-    } else {
-      
-      DBG(Rcpp::Rcout, " evtt after reftime " );
-
-      if(d(sub_idx, COL_REFTIME) <
-          d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
-        
-        // censor at mnth - accrual
-        DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
-        
-        d(sub_idx, COL_CEN) = 1;
-        d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
-        d(sub_idx, COL_REASON) = 3;
-        d(sub_idx, COL_IMPUTE) = 1;
-      
-      } else {
-        
-        DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
-        
-        d(sub_idx, COL_CEN) = 1;
-        d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
-        d(sub_idx, COL_REASON) = 4;
-        d(sub_idx, COL_IMPUTE) = 0;
-      }
- 
-    }
+    clin_censoring_subj(sub_idx);
     
-    DBG(Rcpp::Rcout, " sub_idx " << sub_idx
-                                 << " COL_CEN " << d(sub_idx, COL_CEN)
-                                 << " COL_OBST " << d(sub_idx, COL_OBST)
-                                 << " COL_REASON " << d(sub_idx, COL_REASON)
-                                 << " COL_IMPUTE " << d(sub_idx, COL_IMPUTE));
-
+    if(d(sub_idx, COL_CEN) == 0 && d(sub_idx, COL_TRT) == 0) {
+      n_evnt_0 += 1;
+    } 
+    if(d(sub_idx, COL_CEN) == 0 && d(sub_idx, COL_TRT) == 1) {
+      n_evnt_1 += 1;
+    } 
+    
     if(d(sub_idx, COL_TRT) == 0) {
       tot_obst_0 = tot_obst_0 + d(sub_idx, COL_OBST);
-    } else {
+    } 
+    if(d(sub_idx, COL_TRT) == 1) {
       tot_obst_1 = tot_obst_1 + d(sub_idx, COL_OBST);
-    }
+    } 
+
+    DBG(Rcpp::Rcout, " trt          "  << d(sub_idx, COL_TRT)); 
+    DBG(Rcpp::Rcout, " obst         "  << d(sub_idx, COL_OBST)); 
+    DBG(Rcpp::Rcout, " cen          "  << d(sub_idx, COL_CEN));
+    DBG(Rcpp::Rcout, " reas         "  << d(sub_idx, COL_REASON));
+    DBG(Rcpp::Rcout, " impute       "  << d(sub_idx, COL_IMPUTE));
+    
+
   }
   
   // Rcpp::Rcout << d << std::endl;
@@ -540,35 +486,38 @@ Rcpp::List Trial::clin_set_state(){
   return ret;
 }
       
-// set censoring status up to participant n_target (1 to 1000)
-// with or without fu.
-// ref_time is an absolute time corresponding to the time of the 
-// interim or final analysis.
-// in the case of the final analysis is_final should be set to true 
-// and ref_time should be set to zero as it is not used.
-Rcpp::List Trial::clin_set_state(int n_target, double ref_time){
+
+// for final:
+// set n_target to n_enrolled (= nmax if no early stopping) and ref_time to zero 
+//  => the max fu for each subj will be computed
+// 
+// for interim:
+// set n_target to interim n and ref_time to time of interim
+Rcpp::List Trial::clin_censoring(int n_target, double ref_time){
 
   int n_evnt_0 = 0;
   int n_evnt_1 = 0;
   double tot_obst_0 = 0;
   double tot_obst_1 = 0;
+  double fudge = 0.00001;
 
   // set censoring and event times up to the current interim
   // in this instance we do no imputation - this is purely for the
   // posterior at the current interim (no predictive probs.)
   for(int sub_idx = 0; sub_idx < n_target; sub_idx++){
     
-    DBG(Rcpp::Rcout, "STARTING set state for sub_idx " << sub_idx);
+    DBG(Rcpp::Rcout, "STARTING set censoring state for sub_idx " << sub_idx);
     
-    if(ref_time < (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) + 
-      d(sub_idx, COL_ACCRT)){
+    if(ref_time < (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT)){
       
       DBG(Rcpp::Rcout, " max fu is after reftime for sub " << sub_idx); 
-      
       d(sub_idx, COL_REFTIME) = (double)cfg["max_age_fu"] - 
-        d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT);
+        d(sub_idx, COL_AGE) + d(sub_idx, COL_ACCRT) + fudge;
+      
+      
     } else{
-      d(sub_idx, COL_REFTIME) = ref_time;
+      
+      d(sub_idx, COL_REFTIME) = ref_time + fudge;
     }
     
     DBG(Rcpp::Rcout, " ref_time     "  << d(sub_idx, COL_REFTIME)); 
@@ -577,90 +526,27 @@ Rcpp::List Trial::clin_set_state(int n_target, double ref_time){
     DBG(Rcpp::Rcout, " ref - acc    "  << d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT));
     DBG(Rcpp::Rcout, " agemax - age "  << (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE));
     
-    if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME)){
-      
-      DBG(Rcpp::Rcout, " evtt before reftime " );
-      
-      if(d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) <= (double)cfg["max_age_fu"]){
-        // observed event
-        DBG(Rcpp::Rcout, " evtt occurred before too old" );
-        
-        d(sub_idx, COL_CEN) = 0;
-        d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
-        d(sub_idx, COL_REASON) = 1;
-        d(sub_idx, COL_IMPUTE) = 0;
-  
-        if(d(sub_idx, COL_TRT) == 0) {
-          n_evnt_0 += 1;
-        } else {
-          n_evnt_1 += 1;
-        }
-        
-      } else {
-        
-        DBG(Rcpp::Rcout, " evtt after too old" );
-        
-        if(d(sub_idx, COL_REFTIME) <
-                  d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
-        
-          // censor at mnth - accrual
-          DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
-          
-          d(sub_idx, COL_CEN) = 1;
-          d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
-          d(sub_idx, COL_REASON) = 3;
-          d(sub_idx, COL_IMPUTE) = 1;
-        
-        } else {
-          
-          DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
-          
-          d(sub_idx, COL_CEN) = 1;
-          d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
-          d(sub_idx, COL_REASON) = 4;
-          d(sub_idx, COL_IMPUTE) = 0;
-        }
-
-      }
-
-    } else {
-      
-      DBG(Rcpp::Rcout, " evtt after reftime " );
-
-      if(d(sub_idx, COL_REFTIME) <
-          d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
-        
-        // censor at mnth - accrual
-        DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
-        
-        d(sub_idx, COL_CEN) = 1;
-        d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
-        d(sub_idx, COL_REASON) = 3;
-        d(sub_idx, COL_IMPUTE) = 1;
-      
-      } else {
-        
-        DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
-        
-        d(sub_idx, COL_CEN) = 1;
-        d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
-        d(sub_idx, COL_REASON) = 4;
-        d(sub_idx, COL_IMPUTE) = 0;
-      }
- 
-    }
+    clin_censoring_subj(sub_idx);
     
-    DBG(Rcpp::Rcout, " sub_idx " << sub_idx 
-                                 << " COL_CEN " << d(sub_idx, COL_CEN)
-                                 << " COL_OBST " << d(sub_idx, COL_OBST)
-                                 << " COL_REASON " << d(sub_idx, COL_REASON)
-                                 << " COL_IMPUTE " << d(sub_idx, COL_IMPUTE));
-
+    if(d(sub_idx, COL_CEN) == 0 && d(sub_idx, COL_TRT) == 0) {
+      n_evnt_0 += 1;
+    } 
+    if(d(sub_idx, COL_CEN) == 0 && d(sub_idx, COL_TRT) == 1) {
+      n_evnt_1 += 1;
+    } 
+      
     if(d(sub_idx, COL_TRT) == 0) {
       tot_obst_0 = tot_obst_0 + d(sub_idx, COL_OBST);
-    } else {
+    } 
+    if(d(sub_idx, COL_TRT) == 1) {
       tot_obst_1 = tot_obst_1 + d(sub_idx, COL_OBST);
-    }
+    } 
+        
+    DBG(Rcpp::Rcout, " trt          "  << d(sub_idx, COL_TRT)); 
+    DBG(Rcpp::Rcout, " obst         "  << d(sub_idx, COL_OBST)); 
+    DBG(Rcpp::Rcout, " cen          "  << d(sub_idx, COL_CEN));
+    DBG(Rcpp::Rcout, " reas         "  << d(sub_idx, COL_REASON));
+    DBG(Rcpp::Rcout, " impute       "  << d(sub_idx, COL_IMPUTE));
   }
   
   // Rcpp::Rcout << d << std::endl;
@@ -673,6 +559,79 @@ Rcpp::List Trial::clin_set_state(int n_target, double ref_time){
   return ret;
 }
 
+
+
+void Trial::clin_censoring_subj(int sub_idx){
+  
+  if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME)){
+    
+    DBG(Rcpp::Rcout, " evtt before reftime " );
+    
+    if(d(sub_idx, COL_AGE) + d(sub_idx, COL_EVTT) <= (double)cfg["max_age_fu"]){
+      // observed event
+      DBG(Rcpp::Rcout, " evtt occurred before too old" );
+      
+      d(sub_idx, COL_CEN) = 0;
+      d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
+      d(sub_idx, COL_REASON) = 10;
+      d(sub_idx, COL_IMPUTE) = 0;
+      
+    } else {
+      
+      DBG(Rcpp::Rcout, " evtt before reftime but kid too old" );
+      
+      if(d(sub_idx, COL_REFTIME) <
+        d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
+        
+        // censor at mnth - accrual
+        DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
+        
+        d(sub_idx, COL_CEN) = 1;
+        d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
+        d(sub_idx, COL_REASON) = 11;
+        d(sub_idx, COL_IMPUTE) = 1;
+        
+      } else {
+        
+        DBG(Rcpp::Rcout, " censored - and kid is already older than max age at ref_time" );
+        
+        d(sub_idx, COL_CEN) = 1;
+        d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
+        d(sub_idx, COL_REASON) = 12;
+        d(sub_idx, COL_IMPUTE) = 0;
+      }
+      
+    }
+    
+  } else {
+    
+    DBG(Rcpp::Rcout, " evtt after reftime " );
+    
+    if(d(sub_idx, COL_REFTIME) <
+      d(sub_idx, COL_ACCRT) - d(sub_idx, COL_AGE) + (double)cfg["max_age_fu"] ){
+      
+      // censor at mnth - accrual
+      DBG(Rcpp::Rcout, " censored - but at ref_time not yet older than max age" );
+      
+      d(sub_idx, COL_CEN) = 1;
+      d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
+      d(sub_idx, COL_REASON) = 21;
+      d(sub_idx, COL_IMPUTE) = 1;
+      
+    } else {
+      
+      DBG(Rcpp::Rcout, " censored - and at ref_time older than max age" );
+      
+      d(sub_idx, COL_CEN) = 1;
+      d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
+      d(sub_idx, COL_REASON) = 22;
+      d(sub_idx, COL_IMPUTE) = 0;
+    }
+    
+  }
+  
+  return;
+}
 
 bool Trial::do_immu(){
   if(stop_ven_samp == 1){
@@ -731,6 +690,8 @@ void Trial::set_clin_es(){stop_clin_es = 1;}
 void Trial::set_inconclusive(){inconclu = 1;}
 
 // getters
+
+arma::mat Trial::get_data(){arma::mat dcopy = arma::mat(d); return dcopy;}
 
 int Trial::get_sim_id(){return sim_id;}
 int Trial::get_nmaxsero(){return nmaxsero;}

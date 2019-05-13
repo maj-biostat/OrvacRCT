@@ -18,17 +18,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // test_set_state
-Rcpp::List test_set_state(Rcpp::List& cfg, int n_target, double ref_time, bool dofu, int cur_intrm);
-RcppExport SEXP _OrvacRCT_test_set_state(SEXP cfgSEXP, SEXP n_targetSEXP, SEXP ref_timeSEXP, SEXP dofuSEXP, SEXP cur_intrmSEXP) {
+Rcpp::List test_set_state(Rcpp::List& cfg, bool dofu, int cur_intrm_idx, int n_target, double ref_time);
+RcppExport SEXP _OrvacRCT_test_set_state(SEXP cfgSEXP, SEXP dofuSEXP, SEXP cur_intrm_idxSEXP, SEXP n_targetSEXP, SEXP ref_timeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
+    Rcpp::traits::input_parameter< bool >::type dofu(dofuSEXP);
+    Rcpp::traits::input_parameter< int >::type cur_intrm_idx(cur_intrm_idxSEXP);
     Rcpp::traits::input_parameter< int >::type n_target(n_targetSEXP);
     Rcpp::traits::input_parameter< double >::type ref_time(ref_timeSEXP);
-    Rcpp::traits::input_parameter< bool >::type dofu(dofuSEXP);
-    Rcpp::traits::input_parameter< int >::type cur_intrm(cur_intrmSEXP);
-    rcpp_result_gen = Rcpp::wrap(test_set_state(cfg, n_target, ref_time, dofu, cur_intrm));
+    rcpp_result_gen = Rcpp::wrap(test_set_state(cfg, dofu, cur_intrm_idx, n_target, ref_time));
     return rcpp_result_gen;
 END_RCPP
 }

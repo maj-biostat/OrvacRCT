@@ -85,12 +85,13 @@ public:
   Trial(Rcpp::List& trial_cfg, int idxsim);
   
   arma::mat init_trial_dat();
+  arma::mat init_interims();
   arma::mat get_interims();
   
   void clin_interim();
-  Rcpp::List clin_set_state();
-  Rcpp::List clin_set_state(int n_target, double ref_time);
-  
+  Rcpp::List clin_censoring();
+  Rcpp::List clin_censoring(int n_target, double ref_time);
+  void clin_censoring_subj(int sub_idx);
   void clin_fin();
   
   void run_interims();
@@ -120,6 +121,8 @@ public:
   void set_clin_es();
   void set_inconclusive();
 
+  
+  arma::mat get_data();
   int get_sim_id();
   int get_nmaxsero();
   int get_nstartclin();

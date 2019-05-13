@@ -19,22 +19,45 @@ arma::mat get_interims(Rcpp::List& cfg){
 }
    
 // [[Rcpp::export]]
-Rcpp::List test_set_state(Rcpp::List& cfg,
-  int n_target, double ref_time, bool dofu, int cur_intrm){
+Rcpp::List test_set_state(Rcpp::List& cfg, bool dofu, int cur_intrm_idx, 
+                          int n_target, double ref_time){
   
   Trial t(cfg, 1);
+
   Rcpp::List l ;
-  if(dofu == 1){
-    Rcpp::Rcout << " doing with fu " << std::endl;
-    l = t.clin_set_state(n_target, ref_time);
-  } else {
-    Rcpp::Rcout << " doing without fu " << std::endl;
+  arma::mat dcop;
+  arma::mat icop;
+  
+  if(dofu == 0){
     
-    t.set_curr_intrm_idx(cur_intrm);
-    l = t.clin_set_state();
+    icop = t.get_interims();
+    int n_targ = icop(cur_intrm_idx, INT_N);
+    double ref_t = icop(cur_intrm_idx, INT_T_END);
+    
+    Rcpp::Rcout << " doing without fu n_target " << n_targ << " ref_time " << ref_t << " intrm_idx " << cur_intrm_idx << std::endl;
+    
+    t.set_curr_intrm_idx(cur_intrm_idx);
+    l = t.clin_censoring();
+    dcop = t.get_data();
+
+    //arma::uvec uimpute = arma::find(d.col(COL_IMPUTE) == 1);
+    
+  } else {
+    
+    icop = t.get_interims();
+
+    Rcpp::Rcout << " doing with fu n_target " << n_target << " ref_time " << ref_time << " intrm_idx " << cur_intrm_idx << std::endl;
+
+    t.set_curr_intrm_idx(cur_intrm_idx);
+    l = t.clin_censoring(n_target, ref_time);
+    dcop = t.get_data();
   }
   
-  return l;
+  Rcpp::List ret = Rcpp::List::create(Rcpp::Named("state") = l,
+                     Rcpp::Named("dat") = dcop,
+                     Rcpp::Named("intrm") = icop);
+  
+  return ret;
 }
 
 

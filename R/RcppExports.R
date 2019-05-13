@@ -5,8 +5,8 @@ get_interims <- function(cfg) {
     .Call(`_OrvacRCT_get_interims`, cfg)
 }
 
-test_set_state <- function(cfg, n_target, ref_time, dofu, cur_intrm) {
-    .Call(`_OrvacRCT_test_set_state`, cfg, n_target, ref_time, dofu, cur_intrm)
+test_set_state <- function(cfg, dofu, cur_intrm_idx, n_target, ref_time) {
+    .Call(`_OrvacRCT_test_set_state`, cfg, dofu, cur_intrm_idx, n_target, ref_time)
 }
 
 simulate_trial <- function(idxsim, cfg, rtn_trial_dat) {
