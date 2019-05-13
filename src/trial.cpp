@@ -171,12 +171,14 @@ void Trial::clin_fin(){
   // if no early stopping then look at max size
   if(is_clin_fut() == 0 && is_clin_es() == 0 && is_immu_fut() == 0){
     n_target = (int)cfg["n_stop"];
+    set_enrolled_ss(n_target);
     INFO(Rcpp::Rcout, get_sim_id(), "final clin no early stop n = " << n_target);
   } else {
     n_target = get_enrolled_ss();
     INFO(Rcpp::Rcout, get_sim_id(), "final clin early stop n = " << n_target);
   }
   
+  set_clin_ss(n_target);
   c_suf_fin = clin_censoring(n_target, 0);
   
   int tot_imp = 0;
@@ -239,6 +241,7 @@ void Trial::immu_fin(){
     INFO(Rcpp::Rcout, get_sim_id(), "final immu early stop n = " << n_target);
   }
   
+  set_immu_ss(n_target);
   i_suf_fin = immu_observed(n_target);
   
   int tot_imp = 0;
@@ -1054,6 +1057,12 @@ double Trial::get_i_ppos_max(){return i_ppos_max;}
 double Trial::get_c_ppos_n(){return c_ppos_n;}
 double Trial::get_c_ppos_max(){return c_ppos_max;} 
 
+double Trial::get_i_p_n(){return i_p_n;}
+double Trial::get_c_p_n(){return c_p_n;} 
+
+double Trial::get_i_p_fin(){return i_p_fin;}
+double Trial::get_c_p_fin(){return c_p_fin;} 
+
 double Trial::get_thresh_pp_fut(){return (double)cfg["thresh_pp_fut"];} 
 double Trial::get_thresh_pp_es(){return (double)cfg["thresh_pp_es"];} 
 double Trial::get_thresh_p_sup(){return (double)cfg["thresh_p_sup"];} 
@@ -1061,6 +1070,7 @@ double Trial::get_thresh_p_sup(){return (double)cfg["thresh_p_sup"];}
 int Trial::get_num_interims(){return intrms.n_rows;}
 int Trial::get_interim_n(int i){return intrms(i, INT_N);}
 int Trial::get_interim_time(int i){return intrms(i, INT_T_END);}
+int Trial::get_curr_intrm_idx(){return idx_cur_intrm;}
 
 int Trial::is_v_samp_stopped(){return stop_ven_samp;}
 int Trial::is_immu_fut(){return stop_immu_fut;}

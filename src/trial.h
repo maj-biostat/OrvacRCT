@@ -76,7 +76,7 @@ protected:
   Rcpp::List i_suf_intrm_fu;
   Rcpp::List i_suf_max_fu;
   
-  // posterior probability of trt effect
+  // current posterior probability of trt effect
   double i_p_n = 0;
   double c_p_n = 0;
   
@@ -148,10 +148,17 @@ public:
   int get_immu_fin_decision();
   int get_clin_fin_decision();
 
+  // getters for predictive probs
   double get_i_ppos_n();
   double get_i_ppos_max(); 
   double get_c_ppos_n();
   double get_c_ppos_max(); 
+  // posterior prob at current interim
+  double get_i_p_n();
+  double get_c_p_n();
+  // final posterior prob
+  double get_i_p_fin();
+  double get_c_p_fin();
   
   double get_thresh_pp_fut();
   double get_thresh_pp_es();
@@ -160,6 +167,7 @@ public:
   int get_num_interims();
   int get_interim_n(int i);
   int get_interim_time(int i);
+  int get_curr_intrm_idx();
   
   int is_v_samp_stopped();
   int is_immu_fut();

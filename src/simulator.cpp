@@ -76,10 +76,30 @@ Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat) {
   t.run_final();
   t.print_state();
   
+  Rcpp::List ret = Rcpp::List::create(Rcpp::Named("idxsim") = t.get_sim_id());
+  ret["p0"] = (double)cfg["baseline_prob_sero"];
+  ret["p1"] = (double)cfg["trt_prob_sero"];
+  ret["m0"] = log(2)/(double)cfg["b0_tte"];
+  ret["m1"] = log(2)/((double)cfg["b0_tte"] + (double)cfg["b1_tte"]);
+  ret["n_enrolled"] = t.get_enrolled_ss();
+  ret["ss_immu"] = t.get_immu_ss();
+  ret["ss_clin"] = t.get_clin_ss();
+  ret["stop_v_samp"] = t.is_v_samp_stopped();
+  ret["stop_i_fut"] = t.is_immu_fut();
+  ret["stop_c_fut"] = t.is_clin_fut();
+  ret["stop_c_sup"] = t.is_clin_es();
+  ret["inconclu"] = t.is_inconclusive();
+  ret["i_final"] = t.get_immu_fin_decision();
+  ret["c_final"] = t.get_clin_fin_decision();
+  ret["i_ppn"] = t.get_i_ppos_n() > 0 ? t.get_i_ppos_n() : NA_REAL;
+  ret["i_ppmax"] = t.get_i_ppos_max() > 0 ? t.get_i_ppos_max() : NA_REAL;
+  ret["c_ppn"] = t.get_c_ppos_n() > 0 ? t.get_c_ppos_n() : NA_REAL;
+  ret["c_ppmax"] = t.get_c_ppos_max() > 0 ? t.get_c_ppos_max() : NA_REAL;
+  ret["i_p_fin"] = t.get_i_p_fin() > 0 ? t.get_i_p_fin() : NA_REAL;
+  ret["c_p_fin"] = t.get_c_p_fin() > 0 ? t.get_c_p_fin() : NA_REAL;
   
-  Rcpp::List ret;
-  ret["trial"] = 1;
-  // ret["trial"] = t.as_list();
+  
+  INFO(Rcpp::Rcout, idxsim, "FINISHED.");
   
   return ret;
 }
