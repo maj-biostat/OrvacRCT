@@ -69,13 +69,23 @@ protected:
   Rcpp::List c_suf_intrm_fu;
   Rcpp::List c_suf_max_fu;
   
-  // probabilities of success and futility  
+  // sufficient stats for immu
+  Rcpp::List i_suf_fin;
+  Rcpp::List i_suf_intrm;
+  Rcpp::List i_suf_intrm_fu;
+  Rcpp::List i_suf_max_fu;
+  
+  // posterior probability of trt effect
+  double i_p_n = 0;
+  double c_p_n = 0;
+  
+  // predictive prob at time of current interim
   double i_ppos_n = 0;
   double i_ppos_max = 0; 
   double c_ppos_n = 0;
   double c_ppos_max = 0;
   
-  // final analysis
+  // posterior prob at final analysis
   double i_p_fin = 0; 
   double c_p_fin = 0;
   
@@ -93,6 +103,9 @@ public:
   Rcpp::List clin_censoring(int n_target, double ref_time);
   void clin_censoring_subj(int sub_idx);
   void clin_fin();
+  
+  void immu_interim();
+  Rcpp::List immu_observed();
   
   void run_interims();
   void run_final();
