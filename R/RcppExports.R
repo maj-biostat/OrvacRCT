@@ -5,6 +5,10 @@ get_interims <- function(cfg) {
     .Call(`_OrvacRCT_get_interims`, cfg)
 }
 
+get_data <- function(cfg) {
+    .Call(`_OrvacRCT_get_data`, cfg)
+}
+
 test_set_state <- function(cfg, dofu, cur_intrm_idx, n_target, ref_time) {
     .Call(`_OrvacRCT_test_set_state`, cfg, dofu, cur_intrm_idx, n_target, ref_time)
 }

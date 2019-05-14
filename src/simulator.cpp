@@ -17,6 +17,17 @@ arma::mat get_interims(Rcpp::List& cfg){
   
   return t.get_interims();
 }
+
+// [[Rcpp::export]]
+arma::mat get_data(Rcpp::List& cfg){
+  
+  Trial t(cfg, 1);
+  
+  Rcpp::Rcout << " STARTING TRIAL ID " << 1 << std::endl;
+  
+  return t.get_data();
+}
+
    
 // [[Rcpp::export]]
 Rcpp::List test_set_state(Rcpp::List& cfg, bool dofu, int cur_intrm_idx, 

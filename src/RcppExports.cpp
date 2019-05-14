@@ -17,6 +17,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_data
+arma::mat get_data(Rcpp::List& cfg);
+RcppExport SEXP _OrvacRCT_get_data(SEXP cfgSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_data(cfg));
+    return rcpp_result_gen;
+END_RCPP
+}
 // test_set_state
 Rcpp::List test_set_state(Rcpp::List& cfg, bool dofu, int cur_intrm_idx, int n_target, double ref_time);
 RcppExport SEXP _OrvacRCT_test_set_state(SEXP cfgSEXP, SEXP dofuSEXP, SEXP cur_intrm_idxSEXP, SEXP n_targetSEXP, SEXP ref_timeSEXP) {
@@ -72,6 +83,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_OrvacRCT_get_interims", (DL_FUNC) &_OrvacRCT_get_interims, 1},
+    {"_OrvacRCT_get_data", (DL_FUNC) &_OrvacRCT_get_data, 1},
     {"_OrvacRCT_test_set_state", (DL_FUNC) &_OrvacRCT_test_set_state, 5},
     {"_OrvacRCT_test_rbinom_r", (DL_FUNC) &_OrvacRCT_test_rbinom_r, 2},
     {"_OrvacRCT_test_armabinom", (DL_FUNC) &_OrvacRCT_test_armabinom, 2},

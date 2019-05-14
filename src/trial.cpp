@@ -39,12 +39,15 @@ arma::mat Trial::init_trial_dat(){
     
     d(i, COL_AGE) = R::runif((double)cfg["age_months_lwr"], (double)cfg["age_months_upr"]);
     
-    d(i, COL_SEROT2) = R::rbinom(1, cfg["baseline_prob_sero"]);
+    //d(i, COL_SEROT2) = R::rbinom(1, cfg["baseline_prob_sero"]);
+    d(i, COL_SEROT2) = arma::randu() < (double)cfg["baseline_prob_sero"] ? 1 : 0; 
+    
     d(i, COL_SEROT3) = d(i, COL_SEROT2);
     d(i, COL_PROBT3) = d(i, COL_TRT) * (double)cfg["delta_sero_t3"];
     
     if(d(i, COL_SEROT2) == 0 && d(i, COL_TRT) == 1){
-      d(i, COL_SEROT3) = R::rbinom(1, d(i, COL_PROBT3));
+      //d(i, COL_SEROT3) = R::rbinom(1, d(i, COL_PROBT3));
+      d(i, COL_SEROT3) = arma::randu() < d(i, COL_PROBT3) ? 1 : 0;
     }
     
     // tte - the paramaterisation of rexp uses SCALE NOTE RATE!!!!!!!!!!!
@@ -204,8 +207,8 @@ void Trial::clin_fin(){
     
   }
 
-  arma::uvec ugt1 = arma::find(m.col(COL_RATIO) < 1);
-  c_p_fin =  (double)ugt1.n_elem / (double)cfg["post_draw"];
+  arma::uvec u1 = arma::find(m.col(COL_RATIO) < 1);
+  c_p_fin =  (double)u1.n_elem / (double)cfg["post_draw"];
   
   if(c_p_fin > (double)cfg["thresh_p_sup"]){
     set_clin_fin_decision(1);
@@ -267,8 +270,8 @@ void Trial::immu_fin(){
     
   }
   
-  arma::uvec ugt0 = arma::find(m.col(COL_DELTA) > 0);
-  i_p_fin =  (double)ugt0.n_elem / (double)cfg["post_draw"];
+  arma::uvec u0 = arma::find(m.col(COL_DELTA) > 0);
+  i_p_fin =  (double)u0.n_elem / (double)cfg["post_draw"];
   
   if(i_p_fin > (double)cfg["thresh_p_sup"]){
     set_immu_fin_decision(1);
@@ -403,7 +406,7 @@ void Trial::immu_interim(){
   arma::mat m_pp_int = arma::zeros((int)cfg["post_draw"] , 3);
   arma::mat m_pp_max = arma::zeros((int)cfg["post_draw"] , 3);
   
-  arma::uvec ugt0;
+  arma::uvec u0;
   int int_win = 0;
   int max_win = 0;
   
@@ -445,9 +448,11 @@ void Trial::immu_interim(){
     for(int j = 0; j < (int)uimpute.n_elem; j++){
       int sub_idx = uimpute(j);
       if(d(sub_idx, COL_TRT) == 0){
-        d(sub_idx, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA0));
+        //d(sub_idx, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA0));
+        d(sub_idx, COL_SEROT3) = arma::randu() < m(i, COL_THETA0) ? 1 : 0; 
       } else {
-        d(sub_idx, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA1));
+        //d(sub_idx, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA1));
+        d(sub_idx, COL_SEROT3) = arma::randu() < m(i, COL_THETA1) ? 1 : 0; 
       }
     }
     
@@ -472,8 +477,8 @@ void Trial::immu_interim(){
     //             << " m_pp_int(999, COL_THETA1) " << m_pp_int(999, COL_THETA1) << std::endl;
 
     // empirical posterior probability that ratio_lamb > 1
-    ugt0 = arma::find(m_pp_int.col(COL_DELTA) > 0);
-    if((double)ugt0.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
+    u0 = arma::find(m_pp_int.col(COL_DELTA) > 0);
+    if((double)u0.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
       int_win++;
     }
     
@@ -481,9 +486,12 @@ void Trial::immu_interim(){
     // max samp size of 250
     for(int k = (int)intrms(idx_cur_intrm, INT_I_START); k < (int)cfg["n_max_sero"]; k++){
       if(d(k, COL_TRT) == 0){
-        d(k, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA0));
+        //d(k, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA0));
+        d(k, COL_SEROT3) = arma::randu() < m(i, COL_THETA0) ? 1 : 0; 
+        
       } else {
-        d(k, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA1));
+        //d(k, COL_SEROT3) = R::rbinom(1, m(i, COL_THETA1));
+        d(k, COL_SEROT3) = arma::randu() < m(i, COL_THETA1) ? 1 : 0; 
       }
     }
     
@@ -512,8 +520,8 @@ void Trial::immu_interim(){
 
     
     // empirical posterior probability that ratio_lamb > 1
-    ugt0 = arma::find(m_pp_max.col(COL_DELTA) > 0);
-    if((double)ugt0.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
+    u0 = arma::find(m_pp_max.col(COL_DELTA) > 0);
+    if((double)u0.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
       max_win++;
     }
     
@@ -528,8 +536,8 @@ void Trial::immu_interim(){
   // Rcpp::Rcout << " int_win      " << max_win << std::endl;
   // Rcpp::Rcout << " max_win      " << max_win << std::endl;
 
-  ugt0 = arma::find(m.col(COL_DELTA) > 0);
-  this->i_p_n = (double)ugt0.n_elem/(double)cfg["post_draw"];
+  u0 = arma::find(m.col(COL_DELTA) > 0);
+  this->i_p_n = (double)u0.n_elem/(double)cfg["post_draw"];
   this->i_ppos_n = (double)int_win/(double)cfg["post_draw"];
   this->i_ppos_max = (double)max_win/(double)cfg["post_draw"];
 
@@ -633,7 +641,7 @@ void Trial::clin_interim(){
   arma::mat m_pp_int = arma::zeros((int)cfg["post_draw"] , 3);
   arma::mat m_pp_max = arma::zeros((int)cfg["post_draw"] , 3);
 
-  arma::uvec ugt1;
+  arma::uvec u1;
   int int_win = 0;
   int max_win = 0;
   
@@ -707,8 +715,8 @@ void Trial::clin_interim(){
       m_pp_int(j, COL_RATIO) = m_pp_int(j, COL_LAMB1) / m_pp_int(j, COL_LAMB0);
     }
     // empirical posterior probability that ratio_lamb < 1
-    ugt1 = arma::find(m_pp_int.col(COL_RATIO) < 1);
-    if((double)ugt1.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
+    u1 = arma::find(m_pp_int.col(COL_RATIO) < 1);
+    if((double)u1.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
       int_win++;
     }
 
@@ -735,8 +743,8 @@ void Trial::clin_interim(){
       m_pp_max(j, COL_RATIO) = m_pp_max(j, COL_LAMB1) / m_pp_max(j, COL_LAMB0);
     }
     // empirical posterior probability that ratio_lamb < 1
-    ugt1 = arma::find(m_pp_max.col(COL_RATIO) < 1);
-    if((double)ugt1.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
+    u1 = arma::find(m_pp_max.col(COL_RATIO) < 1);
+    if((double)u1.n_elem / (double)cfg["post_draw"] > (double)cfg["thresh_p_sup"]){
       max_win++;
     }
 
@@ -764,9 +772,9 @@ void Trial::clin_interim(){
     << " clin int_win " << int_win << " max_win " << max_win 
     << " out of " << (double)cfg["post_draw"]);
 
-  ugt1 = arma::find(m.col(COL_RATIO) < 1);
+  u1 = arma::find(m.col(COL_RATIO) < 1);
   
-  this->c_p_n = (double)ugt1.n_elem/(double)cfg["post_draw"];
+  this->c_p_n = (double)u1.n_elem/(double)cfg["post_draw"];
   this->c_ppos_n = (double)int_win/(double)cfg["post_draw"];
   this->c_ppos_max = (double)max_win/(double)cfg["post_draw"];
 
@@ -1102,25 +1110,29 @@ Rcpp::List Trial::as_list(){
 void Trial::print_state(){
   
   INFO(Rcpp::Rcout, get_sim_id(), 
-    " SUMMARY - Interims: immu stop_v_samp " << is_v_samp_stopped()
+    " SUMMARY - Interims: n = " << get_immu_ss()
+    << " immu stop_v_samp = " << is_v_samp_stopped()
     << " immu_fut " << is_immu_fut()
     << " clin_es " << is_clin_es()
     << " clin_fut " << is_clin_fut()
     << " inconclusive " << is_inconclusive() );
     
   INFO(Rcpp::Rcout, get_sim_id(), 
-    " SUMMARY - Interims: immu ppos at intrm = " << get_i_ppos_n()
+    " SUMMARY - Interims: n = " << get_immu_ss()
+      << " immu ppos at intrm = " << get_i_ppos_n()
     << " immu ppos at max = " << get_i_ppos_max()
     << " clin ppos at intrm = " << get_c_ppos_n()
     << " clin ppos at max = " << get_c_ppos_max()
   );
     
   INFO(Rcpp::Rcout, get_sim_id(), 
-    " SUMMARY - Final analysis: immu_decision " 
-    << get_immu_fin_decision()
-    << " post prob that delta in seroconv > 0 = " << i_p_fin
-    << " clin_decision " 
-    << get_clin_fin_decision() 
+    " SUMMARY - Final analysis: n for immu outcome = " << get_immu_ss() 
+    << " immu_decision = " << get_immu_fin_decision()
+    << " post prob that delta in seroconv > 0 = " << i_p_fin);
+  
+  INFO(Rcpp::Rcout, get_sim_id(),   
+    " SUMMARY - Final analysis: n for clin outcome = " << get_clin_ss()
+    << " clin_decision = " << get_clin_fin_decision() 
     << " post prob of hazard ratio < 1 = " << c_p_fin);
   
 }
