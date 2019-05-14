@@ -9,6 +9,14 @@ test_set_state <- function(cfg, dofu, cur_intrm_idx, n_target, ref_time) {
     .Call(`_OrvacRCT_test_set_state`, cfg, dofu, cur_intrm_idx, n_target, ref_time)
 }
 
+test_rbinom_r <- function(n, p) {
+    .Call(`_OrvacRCT_test_rbinom_r`, n, p)
+}
+
+test_armabinom <- function(n, p) {
+    .Call(`_OrvacRCT_test_armabinom`, n, p)
+}
+
 simulate_trial <- function(idxsim, cfg, rtn_trial_dat) {
     .Call(`_OrvacRCT_simulate_trial`, idxsim, cfg, rtn_trial_dat)
 }

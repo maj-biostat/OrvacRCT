@@ -32,6 +32,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// test_rbinom_r
+arma::vec test_rbinom_r(int n, double p);
+RcppExport SEXP _OrvacRCT_test_rbinom_r(SEXP nSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_rbinom_r(n, p));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_armabinom
+arma::vec test_armabinom(int n, double p);
+RcppExport SEXP _OrvacRCT_test_armabinom(SEXP nSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_armabinom(n, p));
+    return rcpp_result_gen;
+END_RCPP
+}
 // simulate_trial
 Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);
 RcppExport SEXP _OrvacRCT_simulate_trial(SEXP idxsimSEXP, SEXP cfgSEXP, SEXP rtn_trial_datSEXP) {
@@ -49,6 +73,8 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_OrvacRCT_get_interims", (DL_FUNC) &_OrvacRCT_get_interims, 1},
     {"_OrvacRCT_test_set_state", (DL_FUNC) &_OrvacRCT_test_set_state, 5},
+    {"_OrvacRCT_test_rbinom_r", (DL_FUNC) &_OrvacRCT_test_rbinom_r, 2},
+    {"_OrvacRCT_test_armabinom", (DL_FUNC) &_OrvacRCT_test_armabinom, 2},
     {"_OrvacRCT_simulate_trial", (DL_FUNC) &_OrvacRCT_simulate_trial, 3},
     {NULL, NULL, 0}
 };

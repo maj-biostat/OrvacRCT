@@ -61,6 +61,30 @@ Rcpp::List test_set_state(Rcpp::List& cfg, bool dofu, int cur_intrm_idx,
 }
 
 
+
+// [[Rcpp::export]]
+arma::vec test_rbinom_r(int n, double p){
+  
+  arma::vec res = arma::zeros(n);  
+  for(int i = 0; i < n; i++){
+    res(i) = R::rbinom(1, p);
+  } 
+  
+  return res;
+}
+
+// [[Rcpp::export]]
+arma::vec test_armabinom(int n, double p){
+  
+  arma::vec res = arma::zeros(n);  
+  
+  for(int i = 0; i < n; i++){
+    res(i) = arma::randu() > p ? 1 : 0;
+  } 
+  
+  return res;
+}
+
    
  
 // [[Rcpp::export]]
