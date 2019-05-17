@@ -15,7 +15,7 @@
    
 #if _INFO
 #define INFO( os, i, msg )                                \
-   (os) << "INFO: " << __FILE__ << "(" << __LINE__ << ") "\
+   (os) << "INFO: " << __DATE__ << " " << __TIME__ << " " << __FILE__ << "(" << __LINE__ << ") "\
         << " sim = " << i << " " << msg << std::endl
 #else
 #define INFO( os, i, msg )

@@ -307,7 +307,7 @@ void Trial::run_interims(){
     
     // keep track of how many currently enrolled
     this->idx_cur_intrm = i;
-    this->n_enrolled = intrms(i, INT_N);
+    set_enrolled_ss(intrms(i, INT_N));
     
     // set clin_ss here but not immu_ss as we do not want 
     // to continue updating immu_ss after 250.
