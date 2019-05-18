@@ -62,11 +62,11 @@ arma::mat Trial::init_trial_dat(){
     
   }
   
-  d.col(COL_SEROIMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_IMPUTESERO) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
-  d.col(COL_IMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_IMPUTEEVTT) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_REFTIME) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   
   return d;
@@ -189,7 +189,7 @@ void Trial::clin_fin(){
   
   int tot_imp = 0;
   for(int i = 0; i < n_enrolled; i++){
-    tot_imp = tot_imp + d(i, COL_IMPUTE);
+    tot_imp = tot_imp + d(i, COL_IMPUTEEVTT);
     
   }
   
@@ -252,7 +252,7 @@ void Trial::immu_fin(){
   
   int tot_imp = 0;
   for(int i = 0; i < n_target; i++){
-    tot_imp = tot_imp + d(i, COL_SEROIMPUTE);
+    tot_imp = tot_imp + d(i, COL_IMPUTESERO);
     
   }
   
@@ -416,7 +416,7 @@ void Trial::immu_interim(){
   i_suf_intrm = immu_observed();
   
   // subjs that require imputation
-  arma::uvec uimpute = arma::find(d.col(COL_SEROIMPUTE) == 1);
+  arma::uvec uimpute = arma::find(d.col(COL_IMPUTESERO) == 1);
   
   INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
     << " immu using up to n = " << (int)intrms(idx_cur_intrm, INT_N) 
@@ -531,7 +531,7 @@ void Trial::immu_interim(){
   }
   
   // reset so have clean state for next interim
-  d.col(COL_SEROIMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_IMPUTESERO) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   
   // Rcpp::Rcout << " int_win      " << max_win << std::endl;
   // Rcpp::Rcout << " max_win      " << max_win << std::endl;
@@ -567,12 +567,12 @@ Rcpp::List Trial::immu_observed(){
     
     if(d(sub_idx, COL_ACCRT) + (double)cfg["sero_info_delay"] > ref_time){
       
-      d(sub_idx, COL_SEROIMPUTE) = 1;
+      d(sub_idx, COL_IMPUTESERO) = 1;
 
       continue;
     }
     
-    d(sub_idx, COL_SEROIMPUTE) = 0;
+    d(sub_idx, COL_IMPUTESERO) = 0;
     
     if(d(sub_idx, COL_TRT) == 0){
       n_tot_0++;
@@ -607,7 +607,7 @@ Rcpp::List Trial::immu_observed(int n_target){
   
   for(int sub_idx = 0; sub_idx < n_target; sub_idx++){
     
-    d(sub_idx, COL_SEROIMPUTE) = 0;
+    d(sub_idx, COL_IMPUTESERO) = 0;
     
     if(d(sub_idx, COL_TRT) == 0){
       n_tot_0++;
@@ -650,7 +650,7 @@ void Trial::clin_interim(){
   
   c_suf_intrm = clin_censoring();
   // subjs that require imputation
-  arma::uvec uimpute = arma::find(d.col(COL_IMPUTE) == 1);
+  arma::uvec uimpute = arma::find(d.col(COL_IMPUTEEVTT) == 1);
   
   INFO(Rcpp::Rcout, get_sim_id(), "intrm " << idx_cur_intrm 
     << " clin using up to n = " << (int)intrms(idx_cur_intrm, INT_N) 
@@ -668,7 +668,7 @@ void Trial::clin_interim(){
   d_orig.col(1) = arma::vec(d.col(COL_CEN));
   d_orig.col(2) = arma::vec(d.col(COL_OBST));
   d_orig.col(3) = arma::vec(d.col(COL_REASON));
-  d_orig.col(4) = arma::vec(d.col(COL_IMPUTE));
+  d_orig.col(4) = arma::vec(d.col(COL_IMPUTEEVTT));
   d_orig.col(5) = arma::vec(d.col(COL_REFTIME));
   
   
@@ -753,7 +753,7 @@ void Trial::clin_interim(){
     d.col(COL_CEN) = arma::vec(d_orig.col(1));
     d.col(COL_OBST) = arma::vec(d_orig.col(2));
     d.col(COL_REASON) = arma::vec(d_orig.col(3));
-    d.col(COL_IMPUTE) = arma::vec(d_orig.col(4));
+    d.col(COL_IMPUTEEVTT) = arma::vec(d_orig.col(4));
     d.col(COL_REFTIME) = arma::vec(d_orig.col(5));
 
     
@@ -764,7 +764,7 @@ void Trial::clin_interim(){
   d.col(COL_CEN) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_OBST) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_REASON) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
-  d.col(COL_IMPUTE) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
+  d.col(COL_IMPUTEEVTT) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   d.col(COL_REFTIME) = arma::vec(Rcpp::rep(NA_REAL, (int)cfg["n_stop"]));
   
   
@@ -832,7 +832,7 @@ Rcpp::List Trial::clin_censoring(){
     DBG(Rcpp::Rcout, " obst         "  << d(sub_idx, COL_OBST)); 
     DBG(Rcpp::Rcout, " cen          "  << d(sub_idx, COL_CEN));
     DBG(Rcpp::Rcout, " reas         "  << d(sub_idx, COL_REASON));
-    DBG(Rcpp::Rcout, " impute       "  << d(sub_idx, COL_IMPUTE));
+    DBG(Rcpp::Rcout, " impute       "  << d(sub_idx, COL_IMPUTEEVTT));
     
 
   }
@@ -907,7 +907,7 @@ Rcpp::List Trial::clin_censoring(int n_target, double ref_time){
     DBG(Rcpp::Rcout, " obst         "  << d(sub_idx, COL_OBST)); 
     DBG(Rcpp::Rcout, " cen          "  << d(sub_idx, COL_CEN));
     DBG(Rcpp::Rcout, " reas         "  << d(sub_idx, COL_REASON));
-    DBG(Rcpp::Rcout, " impute       "  << d(sub_idx, COL_IMPUTE));
+    DBG(Rcpp::Rcout, " impute       "  << d(sub_idx, COL_IMPUTEEVTT));
   }
   
   // Rcpp::Rcout << d << std::endl;
@@ -935,7 +935,7 @@ void Trial::clin_censoring_subj(int sub_idx){
       d(sub_idx, COL_CEN) = 0;
       d(sub_idx, COL_OBST) = d(sub_idx, COL_EVTT);
       d(sub_idx, COL_REASON) = 10;
-      d(sub_idx, COL_IMPUTE) = 0;
+      d(sub_idx, COL_IMPUTEEVTT) = 0;
       
     } else {
       
@@ -950,7 +950,7 @@ void Trial::clin_censoring_subj(int sub_idx){
         d(sub_idx, COL_CEN) = 1;
         d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
         d(sub_idx, COL_REASON) = 11;
-        d(sub_idx, COL_IMPUTE) = 1;
+        d(sub_idx, COL_IMPUTEEVTT) = 1;
         
       } else {
         
@@ -959,7 +959,7 @@ void Trial::clin_censoring_subj(int sub_idx){
         d(sub_idx, COL_CEN) = 1;
         d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
         d(sub_idx, COL_REASON) = 12;
-        d(sub_idx, COL_IMPUTE) = 0;
+        d(sub_idx, COL_IMPUTEEVTT) = 0;
       }
       
     }
@@ -977,7 +977,7 @@ void Trial::clin_censoring_subj(int sub_idx){
       d(sub_idx, COL_CEN) = 1;
       d(sub_idx, COL_OBST) = d(sub_idx, COL_REFTIME) - d(sub_idx, COL_ACCRT) ;
       d(sub_idx, COL_REASON) = 21;
-      d(sub_idx, COL_IMPUTE) = 1;
+      d(sub_idx, COL_IMPUTEEVTT) = 1;
       
     } else {
       
@@ -986,7 +986,7 @@ void Trial::clin_censoring_subj(int sub_idx){
       d(sub_idx, COL_CEN) = 1;
       d(sub_idx, COL_OBST) = (double)cfg["max_age_fu"] - d(sub_idx, COL_AGE) ;
       d(sub_idx, COL_REASON) = 22;
-      d(sub_idx, COL_IMPUTE) = 0;
+      d(sub_idx, COL_IMPUTEEVTT) = 0;
     }
     
   }

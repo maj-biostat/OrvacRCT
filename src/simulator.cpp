@@ -12,9 +12,6 @@
 arma::mat get_interims(Rcpp::List& cfg){
   
   Trial t(cfg, 1);
-  
-  Rcpp::Rcout << " STARTING TRIAL ID " << 1 << std::endl;
-  
   return t.get_interims();
 }
 
@@ -22,9 +19,6 @@ arma::mat get_interims(Rcpp::List& cfg){
 arma::mat get_data(Rcpp::List& cfg){
   
   Trial t(cfg, 1);
-  
-  Rcpp::Rcout << " STARTING TRIAL ID " << 1 << std::endl;
-  
   return t.get_data();
 }
 

@@ -12,12 +12,12 @@
 #define COL_SEROT2        4
 #define COL_SEROT3        5
 #define COL_PROBT3        6
-#define COL_SEROIMPUTE    7
+#define COL_IMPUTESERO    7
 #define COL_EVTT          8
 #define COL_CEN           9
 #define COL_OBST          10
 #define COL_REASON        11
-#define COL_IMPUTE        12
+#define COL_IMPUTEEVTT    12
 #define COL_REFTIME       13
 #define NCOL              14
 
