@@ -20,7 +20,10 @@ Trial::Trial(Rcpp::List& trial_cfg, int idxsim){
 
 }
 
-
+/**
+ * Initialise a trial dataset based on configuration values.
+ *
+ */
 arma::mat Trial::init_trial_dat(){
 
   int n = (int)cfg["n_stop"];
@@ -72,6 +75,13 @@ arma::mat Trial::init_trial_dat(){
   return d;
 }
 
+/**
+ * Compute the start and end participant index for each interim 
+ * along with the accrual times and total number of subjects included
+ * until the current interim. The final analysis is not included in the 
+ * table of interims.
+ *
+ */
 arma::mat Trial::init_interims(){
   
   // get_interims
@@ -168,6 +178,14 @@ void Trial::run_final(){
   
 }
 
+/**
+ * Runs the final analysis for the clinical outcome. This might be based on
+ * the maximum sample size, or, if early stopping occurred, the number of 
+ * participants at the time the trial was stopped, followed up until 36 monts.
+ * 
+ * The final clinical decision is set to -1, 0 or 1 (fut, nd, sup).
+ *
+ */
 void Trial::clin_fin(){
   
   double a = (double)cfg["prior_gamma_a"];
@@ -231,7 +249,15 @@ void Trial::clin_fin(){
 
 
 
-
+/**
+ * Runs the final analysis for the immunological outcome. This might be based on
+ * the maximum sample size (250), or, if early stopping occurred, the number of 
+ * participants at the time the trial was stopped, followed up until we have
+ * all results.
+ * 
+ * The final immunological decision is set to -1, 0 or 1 (fut, nd, sup).
+ *
+ */
 void Trial::immu_fin(){
   
   double a = (double)cfg["prior_beta_a"];
@@ -299,7 +325,13 @@ void Trial::immu_fin(){
 
 
 
-
+/**
+ * The main loop running through each interim analysis.
+ * 
+ * Performs the immu analyses and decisions followed by the clinical and updates
+ * state based on the decision thresholds.
+ *
+ */
 void Trial::run_interims(){
 
   int i = 0;
@@ -398,6 +430,18 @@ void Trial::run_interims(){
 
 }
 
+/**
+ * Immunological interim analysis. 
+ * 
+ * Process:
+ * For 1000 draws:
+ *  Take a draw from the posterior for each arm.
+ *  Use the draws to impute up to the max samp size.
+ *  Use the draws to impute up to current enrolled where participants are missing
+ *  results.
+ *  Computes the ppos for interim and max sampe size.
+ *
+ */
 void Trial::immu_interim(){
   
 
@@ -548,11 +592,18 @@ void Trial::immu_interim(){
   return;
 }
 
-// determine:
-// 1. how many observations do we have in both arms at the current time 
-//    when we factor in that there is a delay in information for the 
-//    seroconversion status
-// 2. how many successes in each arm
+/**
+ * Compute sufficient statistics for immunological outcome. 
+ * 
+ * Determines ow many observations do we have in both arms at the current time 
+ * when we factor in that there is a delay in information for the 
+ * seroconversion status.
+ * 
+ * Determines how many successes in each arm.
+ * 
+ * Sets impute indicator if the results have not yet been observed.
+ *
+ */
 Rcpp::List Trial::immu_observed(){
   
   int n_evnt_0 = 0;
@@ -597,7 +648,20 @@ Rcpp::List Trial::immu_observed(){
   return ret;
 }
   
-  
+/**
+ * Overridden version where you can specify arbitrary n.
+ * 
+ * Compute sufficient statistics for immunological outcome up to arbitrary n.
+ * 
+ * Determines ow many observations do we have in both arms at the current time 
+ * when we factor in that there is a delay in information for the 
+ * seroconversion status.
+ * 
+ * Determines how many successes in each arm.
+ * 
+ * Sets impute indicator if the results have not yet been observed.
+ *
+ */  
 Rcpp::List Trial::immu_observed(int n_target){
   
   int n_evnt_0 = 0;
@@ -633,7 +697,20 @@ Rcpp::List Trial::immu_observed(int n_target){
 }  
   
   
-  
+/**
+ * Clincial interim analysis. 
+ * 
+ * Analogous to the immunological interim analysis implementation.
+ * 
+ * Process:
+ * For 1000 draws:
+ *  Take a draw from the posterior for each arm.
+ *  Use the draws to impute up to the max samp size.
+ *  Use the draws to impute up to current enrolled where participants are missing
+ *  results.
+ *  Computes the ppos for interim and max sampe size.
+ *
+ */  
 void Trial::clin_interim(){
 
   // stores samples from posterior, 
@@ -785,8 +862,10 @@ void Trial::clin_interim(){
 
 
   
-// set censoring status up to participant.
-// to be used purely for reference time being the current interim
+/**
+ * Sets participant censoring status up to the current interim sample size.
+ *
+ */
 Rcpp::List Trial::clin_censoring(){
 
   int n_evnt_0 = 0;
@@ -848,12 +927,17 @@ Rcpp::List Trial::clin_censoring(){
 }
       
 
-// for final:
-// set n_target to n_enrolled (= nmax if no early stopping) and ref_time to zero 
-//  => the max fu for each subj will be computed
-// 
-// for interim:
-// set n_target to interim n and ref_time to time of interim
+/**
+ * Overridden version to arbitrary n and ref time.
+ * 
+ * Sets participant censoring status up to the current interim sample size.
+ * 
+ * Process:
+ *  set n_target to n_enrolled (= nmax if no early stopping) and ref_time to zero
+ *    the max fu for each subj will be computed
+ *  for interim:
+ *  set n_target to interim n and ref_time to time of interim
+ */
 Rcpp::List Trial::clin_censoring(int n_target, double ref_time){
 
   int n_evnt_0 = 0;
@@ -921,7 +1005,10 @@ Rcpp::List Trial::clin_censoring(int n_target, double ref_time){
 }
 
 
-
+/**
+ * Sets a given participant censoring status.
+ * 
+ */
 void Trial::clin_censoring_subj(int sub_idx){
   
   if(d(sub_idx, COL_ACCRT) + d(sub_idx, COL_EVTT) <= d(sub_idx, COL_REFTIME)){
@@ -994,6 +1081,10 @@ void Trial::clin_censoring_subj(int sub_idx){
   return;
 }
 
+/**
+ * Check on whether immunological outcome is still active.
+ * 
+ */
 bool Trial::do_immu(){
   if(stop_ven_samp == 1){
     return false;
@@ -1012,6 +1103,11 @@ bool Trial::do_immu(){
   }
   return true;
 }
+
+/**
+ * Check on whether clincal outcome is still active.
+ * 
+ */
 bool Trial::do_clin(){
   
   if(n_enrolled < nstartclin){
@@ -1028,6 +1124,8 @@ bool Trial::do_clin(){
   }
   return true;
 }
+
+// Setters.
 
 void Trial::set_nmaxsero(int nmaxs){nmaxsero = nmaxs;}
 void Trial::set_nstartclin(int nstartc){nstartclin = nstartc;}
@@ -1050,7 +1148,7 @@ void Trial::set_clin_fut(){stop_clin_fut = 1;}
 void Trial::set_clin_es(){stop_clin_es = 1;}
 void Trial::set_inconclusive(){inconclu = 1;}
 
-// getters
+// Getters
 
 arma::mat Trial::get_data(){arma::mat dcopy = arma::mat(d); return dcopy;}
 
@@ -1089,6 +1187,9 @@ int Trial::is_clin_fut(){return stop_clin_fut;}
 int Trial::is_clin_es(){return stop_clin_es;}
 int Trial::is_inconclusive(){return inconclu;}
 
+/**
+ * Convenience function to convert trial data into list.
+ */
 Rcpp::List Trial::as_list(){
   Rcpp::List ret;
   ret["n_max_sero"] = get_nmaxsero();
@@ -1107,6 +1208,9 @@ Rcpp::List Trial::as_list(){
   return ret;
 }
 
+/**
+ * Convenience/debug function to print trial state.
+ */
 void Trial::print_state(){
   
   INFO(Rcpp::Rcout, get_sim_id(), 
@@ -1137,6 +1241,9 @@ void Trial::print_state(){
   
 }
 
+/**
+ * Convenience/debug function to print current configuration.
+ */
 void Trial::print_cfg(){
   
   INFO(Rcpp::Rcout, get_sim_id(), "Trial configuration: " );
@@ -1151,7 +1258,9 @@ void Trial::print_cfg(){
 }
 
 
-
+/**
+ * Convenience/debug function to print interims.
+ */
 void Trial::print_interims(){
   
   INFO(Rcpp::Rcout, get_sim_id(), "Interims for this trial: " );

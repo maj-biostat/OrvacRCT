@@ -6,6 +6,19 @@
 
 using namespace Rcpp;
 
+// simulate_trial
+Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);
+RcppExport SEXP _OrvacRCT_simulate_trial(SEXP idxsimSEXP, SEXP cfgSEXP, SEXP rtn_trial_datSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type idxsim(idxsimSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
+    Rcpp::traits::input_parameter< bool >::type rtn_trial_dat(rtn_trial_datSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_trial(idxsim, cfg, rtn_trial_dat));
+    return rcpp_result_gen;
+END_RCPP
+}
 // get_interims
 arma::mat get_interims(Rcpp::List& cfg);
 RcppExport SEXP _OrvacRCT_get_interims(SEXP cfgSEXP) {
@@ -67,27 +80,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// simulate_trial
-Rcpp::List simulate_trial(int idxsim, Rcpp::List& cfg, bool rtn_trial_dat);
-RcppExport SEXP _OrvacRCT_simulate_trial(SEXP idxsimSEXP, SEXP cfgSEXP, SEXP rtn_trial_datSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type idxsim(idxsimSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List& >::type cfg(cfgSEXP);
-    Rcpp::traits::input_parameter< bool >::type rtn_trial_dat(rtn_trial_datSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_trial(idxsim, cfg, rtn_trial_dat));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_OrvacRCT_simulate_trial", (DL_FUNC) &_OrvacRCT_simulate_trial, 3},
     {"_OrvacRCT_get_interims", (DL_FUNC) &_OrvacRCT_get_interims, 1},
     {"_OrvacRCT_get_data", (DL_FUNC) &_OrvacRCT_get_data, 1},
     {"_OrvacRCT_test_set_state", (DL_FUNC) &_OrvacRCT_test_set_state, 5},
     {"_OrvacRCT_test_rbinom_r", (DL_FUNC) &_OrvacRCT_test_rbinom_r, 2},
     {"_OrvacRCT_test_armabinom", (DL_FUNC) &_OrvacRCT_test_armabinom, 2},
-    {"_OrvacRCT_simulate_trial", (DL_FUNC) &_OrvacRCT_simulate_trial, 3},
     {NULL, NULL, 0}
 };
 
